@@ -1,5 +1,3 @@
-# Scripts Directory
+Scripts placeholder for Flag-Remembrance-Roster
 
-Reserved for future JavaScript modules and enhancements.
-
-For now, all functionality is contained in the root `index.html`.
+Add external JS helpers or build scripts here if needed.
