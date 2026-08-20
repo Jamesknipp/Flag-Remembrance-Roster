@@ -1,551 +1,1035 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>Army Aviation Memorial Roster</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <style>
-    body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      margin: 0;
-      padding: 0;
-      background: #0b1020;
-      color: #f5f5f5;
-    }
-    header {
-      padding: 16px 24px;
-      background: #11172b;
-      border-bottom: 1px solid #222a3f;
-    }
-    header h1 {
-      margin: 0;
-      font-size: 1.6rem;
-      letter-spacing: 0.05em;
-    }
-    header p {
-      margin: 4px 0 0;
-      font-size: 0.9rem;
-      color: #a9b3d1;
-    }
-    main {
-      padding: 16px 24px 32px;
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-    .layout {
-      display: grid;
-      grid-template-columns: 2fr 1fr;
-      gap: 24px;
-    }
-    @media (max-width: 900px) {
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Warrant Officer Remembrance Roster</title>
+    <style>
+      :root {
+        --bg-1: #0c1117;
+        --bg-2: #151d24;
+        --panel: rgba(20, 28, 34, 0.82);
+        --panel-strong: rgba(26, 35, 42, 0.94);
+        --panel-alt: rgba(15, 21, 26, 0.9);
+        --line: rgba(218, 180, 110, 0.32);
+        --line-strong: rgba(218, 180, 110, 0.62);
+        --text: #eef3f3;
+        --muted: #b7c6c5;
+        --gold: #d9b36a;
+        --gold-strong: #c9964d;
+        --gold-soft: #f1d59d;
+        --danger: #d96d66;
+        --success: #75ad91;
+        --shadow: rgba(0, 0, 0, 0.38);
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Segoe UI", Arial, sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at top, rgba(218, 180, 110, 0.13), transparent 28%),
+          linear-gradient(135deg, var(--bg-1) 0%, var(--bg-2) 48%, #1c2b31 100%);
+      }
+
+      button, input, select, textarea {
+        font: inherit;
+      }
+
+      .app-shell {
+        max-width: 1480px;
+        margin: 0 auto;
+        padding: 28px 20px 60px;
+      }
+
+      .topbar {
+        background: rgba(17, 24, 29, 0.8);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        box-shadow: 0 16px 32px var(--shadow);
+        padding: 20px 22px;
+        backdrop-filter: blur(10px);
+      }
+
+      .topbar-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        flex-wrap: wrap;
+      }
+
+      .topbar h1 {
+        margin: 0;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        font-size: clamp(2rem, 3vw, 2.8rem);
+      }
+
+      .topbar p {
+        margin: 8px 0 0;
+        color: var(--muted);
+      }
+
+      .top-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .primary, .secondary, .ghost, .danger {
+        border: none;
+        border-radius: 10px;
+        padding: 10px 14px;
+        cursor: pointer;
+        transition: transform 0.18s ease, box-shadow 0.18s ease;
+      }
+
+      .primary:hover, .secondary:hover, .ghost:hover, .danger:hover {
+        transform: translateY(-1px);
+      }
+
+      .primary {
+        background: linear-gradient(135deg, var(--gold), var(--gold-strong));
+        color: #1c120b;
+        font-weight: 700;
+        box-shadow: 0 10px 20px rgba(217, 179, 106, 0.2);
+      }
+
+      .secondary {
+        background: rgba(255,255,255,0.05);
+        color: var(--text);
+        border: 1px solid rgba(255,255,255,0.08);
+      }
+
+      .ghost {
+        background: rgba(217,179,106,0.1);
+        color: var(--gold-soft);
+        border: 1px solid var(--line);
+      }
+
+      .danger {
+        background: rgba(217, 109, 102, 0.1);
+        color: #f8cbc7;
+        border: 1px solid rgba(217, 109, 102, 0.3);
+      }
+
+      .stats-grid {
+        margin-top: 22px;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 18px;
+      }
+
+      .stat-card {
+        background: rgba(18, 26, 31, 0.76);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 18px 16px;
+        text-align: center;
+        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.2);
+      }
+
+      .stat-label {
+        color: var(--muted);
+        font-size: 0.74rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .stat-value {
+        margin-top: 12px;
+        font-size: clamp(1.9rem, 3vw, 2.6rem);
+        font-weight: 700;
+      }
+
       .layout {
-        grid-template-columns: 1fr;
+        display: grid;
+        grid-template-columns: minmax(280px, 390px) minmax(0, 1fr);
+        gap: 24px;
+        margin-top: 28px;
       }
-    }
-    .card {
-      background: #141a30;
-      border: 1px solid #222a3f;
-      border-radius: 8px;
-      padding: 16px 18px;
-      box-shadow: 0 0 0 1px rgba(0,0,0,0.4);
-    }
-    .card h2 {
-      margin: 0 0 10px;
-      font-size: 1.1rem;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      color: #d0dcff;
-    }
-    .stats-bar {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      margin-bottom: 12px;
-    }
-    .stat-pill {
-      background: #1b2340;
-      border-radius: 999px;
-      padding: 6px 12px;
-      font-size: 0.85rem;
-      color: #c3cff5;
-      border: 1px solid #2b3558;
-    }
-    .filters {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-bottom: 12px;
-    }
-    .filters input,
-    .filters select {
-      background: #0f1424;
-      border: 1px solid #2b3558;
-      border-radius: 4px;
-      padding: 6px 8px;
-      color: #e5ebff;
-      font-size: 0.85rem;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 8px;
-      font-size: 0.85rem;
-    }
-    th, td {
-      padding: 6px 8px;
-      border-bottom: 1px solid #222a3f;
-    }
-    th {
-      text-align: left;
-      font-weight: 600;
-      color: #c3cff5;
-      background: #161d36;
-      position: sticky;
-      top: 0;
-      z-index: 1;
-    }
-    tr:nth-child(even) td {
-      background: #10162a;
-    }
-    .badge {
-      display: inline-block;
-      padding: 2px 6px;
-      border-radius: 999px;
-      font-size: 0.75rem;
-      border: 1px solid #3b476e;
-    }
-    .badge-kia {
-      color: #ffb3b3;
-      border-color: #ff5c5c;
-    }
-    .badge-living {
-      color: #b3ffd0;
-      border-color: #4fd38f;
-    }
-    .form-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin-bottom: 12px;
-    }
-    @media (max-width: 600px) {
+
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        box-shadow: 0 14px 28px rgba(0,0,0,0.2);
+        padding: 22px;
+      }
+
+      .panel h2 {
+        margin: 0 0 16px;
+        color: var(--gold-soft);
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        font-size: 0.9rem;
+      }
+
       .form-grid {
-        grid-template-columns: 1fr;
+        display: grid;
+        gap: 14px;
       }
-    }
-    label {
-      font-size: 0.8rem;
-      color: #a9b3d1;
-      display: block;
-      margin-bottom: 3px;
-    }
-    input, select, textarea {
-      width: 100%;
-      box-sizing: border-box;
-      background: #0f1424;
-      border: 1px solid #2b3558;
-      border-radius: 4px;
-      padding: 6px 8px;
-      color: #e5ebff;
-      font-size: 0.85rem;
-    }
-    textarea {
-      resize: vertical;
-      min-height: 60px;
-    }
-    button {
-      background: #2f6bff;
-      border: none;
-      border-radius: 4px;
-      padding: 8px 14px;
-      color: #f5f5f5;
-      font-size: 0.9rem;
-      cursor: pointer;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-    }
-    button:hover {
-      background: #2554c7;
-    }
-    .secondary-btn {
-      background: #1b2340;
-      border: 1px solid #2b3558;
-    }
-    .secondary-btn:hover {
-      background: #222b4a;
-    }
-    .qr-preview {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 8px;
-      margin-top: 8px;
-    }
-    .qr-preview canvas {
-      background: #f5f5f5;
-      padding: 8px;
-      border-radius: 4px;
-    }
-    .small-text {
-      font-size: 0.75rem;
-      color: #a9b3d1;
-    }
-    .row-actions {
-      display: flex;
-      gap: 6px;
-    }
-  </style>
-</head>
-<body>
-  <header>
-    <h1>Army Aviation Memorial Roster</h1>
-    <p>Flag dedications, aviator roll, and QR-linked memorial pages.</p>
-  </header>
 
-  <main>
-    <div class="layout">
-      <!-- Left: Roster -->
-      <section class="card">
-        <h2>Roster</h2>
+      label {
+        display: grid;
+        gap: 8px;
+        font-size: 0.82rem;
+        color: var(--muted);
+      }
 
-        <div class="stats-bar" id="statsBar">
-          <!-- Filled by JS -->
-        </div>
+      input, select, textarea {
+        width: 100%;
+        border: 1px solid rgba(255,255,255,0.12);
+        background: rgba(8, 14, 18, 0.45);
+        color: var(--text);
+        border-radius: 10px;
+        padding: 11px 12px;
+      }
 
-        <div class="filters">
-          <input type="text" id="filterName" placeholder="Filter by name…" />
-          <select id="filterStatus">
-            <option value="">Status: All</option>
-            <option value="KIA">KIA</option>
-            <option value="Living">Living</option>
-          </select>
-          <select id="filterComponent">
-            <option value="">Component: All</option>
-            <option value="Active">Active</option>
-            <option value="Guard">Guard</option>
-            <option value="Reserve">Reserve</option>
-          </select>
-        </div>
+      textarea {
+        min-height: 90px;
+        resize: vertical;
+      }
 
-        <div style="max-height: 380px; overflow: auto; border-radius: 6px; border: 1px solid #222a3f;">
-          <table>
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Unit / Component</th>
-                <th>Status</th>
-                <th>QR</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody id="rosterBody">
-              <!-- Filled by JS -->
-            </tbody>
-          </table>
-        </div>
-      </section>
+      .button-row {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 4px;
+      }
 
-      <!-- Right: Form + QR -->
-      <section class="card">
-        <h2>Submit an Aviator</h2>
+      .filters {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+        gap: 12px;
+        margin-bottom: 18px;
+      }
 
-        <form id="aviatorForm">
-          <div class="form-grid">
-            <div>
-              <label for="aviatorName">Aviator name</label>
-              <input id="aviatorName" required />
-            </div>
-            <div>
-              <label for="unit">Unit / battalion</label>
-              <input id="unit" />
-            </div>
-            <div>
-              <label for="component">Component</label>
-              <select id="component">
-                <option value="">Select…</option>
-                <option value="Active">Active</option>
-                <option value="Guard">Guard</option>
-                <option value="Reserve">Reserve</option>
-              </select>
-            </div>
-            <div>
-              <label for="status">Status</label>
-              <select id="status">
-                <option value="Living">Living</option>
-                <option value="KIA">KIA</option>
-              </select>
-            </div>
-          </div>
+      .table-wrap {
+        overflow-x: auto;
+      }
 
-          <label for="dedicationUrl">Dedication URL (your memorial page link)</label>
-          <input id="dedicationUrl" placeholder="https://…" />
+      table {
+        width: 100%;
+        min-width: 820px;
+        border-collapse: collapse;
+      }
 
-          <label for="notes">Notes (aircraft, era, remarks)</label>
-          <textarea id="notes"></textarea>
+      th, td {
+        padding: 12px 10px;
+        border-bottom: 1px solid rgba(255,255,255,0.08);
+        text-align: left;
+        vertical-align: top;
+      }
 
-          <div class="qr-preview">
-            <div id="qrCanvasContainer"></div>
-            <span class="small-text">
-              QR is generated from the dedication URL. Use this for engraving or printing.
-            </span>
-          </div>
+      th {
+        color: var(--muted);
+        font-size: 0.74rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
 
-          <div style="margin-top: 10px; display: flex; gap: 8px;">
-            <button type="submit">Add to roster</button>
-            <button type="button" class="secondary-btn" id="previewQrBtn">
-              Preview QR
-            </button>
+      tbody tr:hover {
+        background: rgba(255,255,255,0.015);
+      }
+
+      .badge {
+        display: inline-block;
+        padding: 6px 10px;
+        border-radius: 999px;
+        font-size: 0.72rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        font-weight: 700;
+        background: rgba(218, 180, 110, 0.12);
+        color: var(--gold-soft);
+      }
+
+      .badge.kia { background: rgba(217, 109, 102, 0.16); color: #f7c0bb; }
+      .badge.living { background: rgba(117, 173, 145, 0.18); color: #cfeadb; }
+
+      .muted-link {
+        color: var(--gold-soft);
+        text-decoration: none;
+        word-break: break-all;
+      }
+
+      .muted-link:hover { text-decoration: underline; }
+
+      .qr-box {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 92px;
+        height: 92px;
+        background: #fff;
+        border-radius: 10px;
+        padding: 8px;
+        border: 1px solid rgba(0,0,0,0.08);
+        overflow: hidden;
+      }
+
+      .qr-box img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+      }
+
+      .empty-state {
+        padding: 28px 12px;
+        text-align: center;
+        color: var(--muted);
+      }
+
+      .modal {
+        position: fixed;
+        inset: 0;
+        background: rgba(4, 7, 9, 0.75);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.2s ease, visibility 0.2s ease;
+        z-index: 40;
+      }
+
+      .modal.visible {
+        opacity: 1;
+        visibility: visible;
+      }
+
+      .modal-card {
+        width: min(980px, calc(100% - 32px));
+        max-height: 82vh;
+        overflow: auto;
+        background: rgba(17, 24, 29, 0.97);
+        border: 1px solid var(--line-strong);
+        border-radius: 20px;
+        box-shadow: 0 20px 46px rgba(0,0,0,0.45);
+        padding: 20px;
+      }
+
+      .modal-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+
+      .modal-head h3 {
+        margin: 0;
+        font-size: 1.12rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--gold-soft);
+      }
+
+      .batch-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 16px;
+      }
+
+      .batch-item {
+        background: rgba(255,255,255,0.02);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 12px;
+        padding: 14px;
+        text-align: center;
+      }
+
+      .batch-item h4 {
+        margin: 12px 0 0;
+        font-size: 0.9rem;
+      }
+
+      .auth-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(7, 10, 12, 0.8);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 50;
+      }
+
+      .auth-overlay.hidden {
+        display: none;
+      }
+
+      .auth-card {
+        width: min(440px, calc(100% - 32px));
+        background: rgba(19, 27, 30, 0.98);
+        border: 1px solid var(--line-strong);
+        border-radius: 18px;
+        box-shadow: 0 22px 52px rgba(0,0,0,0.4);
+        padding: 24px;
+      }
+
+      .auth-card h2 {
+        margin: 0 0 8px;
+        font-size: 1.4rem;
+      }
+
+      .auth-card p {
+        margin: 0 0 18px;
+        color: var(--muted);
+      }
+
+      .auth-card form {
+        display: grid;
+        gap: 12px;
+      }
+
+      .auth-message {
+        min-height: 20px;
+        margin-top: 12px;
+        color: #f6b4af;
+        font-size: 0.88rem;
+      }
+
+      .hidden { display: none !important; }
+
+      @media (max-width: 980px) {
+        .layout { grid-template-columns: 1fr; }
+        .topbar-head { align-items: flex-start; }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="authOverlay" class="auth-overlay hidden" aria-live="polite">
+      <div class="auth-card">
+        <h2 id="authTitle">Unlock roster</h2>
+        <p id="authText">Enter the roster password to access the app.</p>
+        <form id="authForm">
+          <input id="authPassword" type="password" placeholder="Password" autocomplete="current-password" />
+          <input id="authConfirmPassword" type="password" class="hidden" placeholder="Confirm password" autocomplete="new-password" />
+          <div class="button-row">
+            <button type="submit" class="primary" id="authSubmit">Continue</button>
+            <button type="button" class="secondary hidden" id="skipPasswordBtn">Continue without password</button>
+            <button type="button" class="secondary hidden" id="logoutBtn">Lock roster</button>
           </div>
         </form>
-      </section>
+        <div id="authMessage" class="auth-message" aria-live="polite"></div>
+      </div>
     </div>
-  </main>
 
-  <!-- QR library (lightweight) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="topbar-head">
+          <div>
+            <h1>Warrant Officer Remembrance Roster</h1>
+            <p>Honoring warrant officers who passed away on duty, during training, or in wartime service.</p>
+          </div>
+          <div class="top-actions">
+            <button type="button" id="exportBtn" class="secondary">Export JSON</button>
+            <button type="button" id="importBtn" class="secondary">Import JSON</button>
+            <button type="button" id="batchBtn" class="ghost">QR Batch</button>
+            <button type="button" id="lockBtn" class="ghost">Lock</button>
+          </div>
+        </div>
+      </header>
 
-  <script>
-    // --- Data handling ---
-    const STORAGE_KEY = "aviation_memorial_roster_v1";
+      <section class="stats-grid" aria-label="Statistics">
+        <div class="stat-card"><div class="stat-label">Total</div><div class="stat-value" id="totalCount">0</div></div>
+        <div class="stat-card"><div class="stat-label">Duty</div><div class="stat-value" id="dutyCount">0</div></div>
+        <div class="stat-card"><div class="stat-label">Training</div><div class="stat-value" id="trainingCount">0</div></div>
+        <div class="stat-card"><div class="stat-label">War Time</div><div class="stat-value" id="wartimeCount">0</div></div>
+        <div class="stat-card"><div class="stat-label">KIA</div><div class="stat-value" id="kiaCount">0</div></div>
+        <div class="stat-card"><div class="stat-label">Other</div><div class="stat-value" id="otherCount">0</div></div>
+      </section>
 
-    function loadRoster() {
-      try {
+      <main class="layout">
+        <section class="panel">
+          <h2>Add Warrant Officer</h2>
+          <form id="aviatorForm">
+            <div class="form-grid">
+              <label>
+                Full Name
+                <input type="text" name="name" placeholder="Enter warrant officer name" required />
+              </label>
+              <label>
+                Unit
+                <input type="text" name="unit" placeholder="Ex: 101st Air Refueling Wing" required />
+              </label>
+              <label>
+                Component
+                <select name="component" required>
+                  <option value="">Select component</option>
+                  <option value="Air Force">Air Force</option>
+                  <option value="Army">Army</option>
+                  <option value="Navy">Navy</option>
+                  <option value="Marine Corps">Marine Corps</option>
+                  <option value="Space Force">Space Force</option>
+                  <option value="Coast Guard">Coast Guard</option>
+                  <option value="Civilian">Civilian</option>
+                </select>
+              </label>
+              <label>
+                Status
+                <select name="status" required>
+                  <option value="">Select status</option>
+                  <option value="Duty">Duty</option>
+                  <option value="Training">Training</option>
+                  <option value="War Time">War Time</option>
+                  <option value="KIA">KIA</option>
+                  <option value="Other">Other</option>
+                </select>
+              </label>
+              <label>
+                Dedication URL
+                <input type="url" name="dedicationUrl" placeholder="https://example.com" />
+              </label>
+              <label>
+                Notes
+                <textarea name="notes" placeholder="Service notes, awards, memories, duties, final assignment..."></textarea>
+              </label>
+              <div class="button-row">
+                <button type="submit" class="primary">Add Warrant Officer</button>
+                <button type="reset" class="secondary">Clear Form</button>
+              </div>
+            </div>
+          </form>
+        </section>
+
+        <section class="panel">
+          <h2>Roster</h2>
+          <div class="filters" aria-label="Filters">
+            <label>
+              Filter by name
+              <input id="nameFilter" type="text" placeholder="Search by name" />
+            </label>
+            <label>
+              Status
+              <select id="statusFilter">
+                <option value="">All statuses</option>
+                <option value="Duty">Duty</option>
+                <option value="Training">Training</option>
+                <option value="War Time">War Time</option>
+                <option value="KIA">KIA</option>
+                <option value="Other">Other</option>
+              </select>
+            </label>
+            <label>
+              Component
+              <select id="componentFilter">
+                <option value="">All components</option>
+                <option value="Air Force">Air Force</option>
+                <option value="Army">Army</option>
+                <option value="Navy">Navy</option>
+                <option value="Marine Corps">Marine Corps</option>
+                <option value="Space Force">Space Force</option>
+                <option value="Coast Guard">Coast Guard</option>
+                <option value="Civilian">Civilian</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Unit</th>
+                  <th>Component</th>
+                  <th>Status</th>
+                  <th>Notes</th>
+                  <th>QR</th>
+                  <th>Remove</th>
+                </tr>
+              </thead>
+              <tbody id="rosterTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div id="batchModal" class="modal" aria-hidden="true">
+      <div class="modal-card">
+        <div class="modal-head">
+          <h3>QR Batch</h3>
+          <button type="button" class="secondary" id="closeBatchBtn">Close</button>
+        </div>
+        <div id="batchContent" class="batch-grid"></div>
+      </div>
+    </div>
+
+    <input id="importFileInput" type="file" accept="application/json" class="hidden" />
+
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.5.3/qrcode.min.js"></script>
+    <script>
+      const STORAGE_KEY = 'flag-remembrance-roster-v1';
+      const PASSWORD_KEY = 'flag-remembrance-roster-password';
+
+      const aviatorForm = document.getElementById('aviatorForm');
+      const rosterTableBody = document.getElementById('rosterTableBody');
+      const nameFilter = document.getElementById('nameFilter');
+      const statusFilter = document.getElementById('statusFilter');
+      const componentFilter = document.getElementById('componentFilter');
+      const authOverlay = document.getElementById('authOverlay');
+      const authForm = document.getElementById('authForm');
+      const authPassword = document.getElementById('authPassword');
+      const authConfirmPassword = document.getElementById('authConfirmPassword');
+      const authMessage = document.getElementById('authMessage');
+      const authTitle = document.getElementById('authTitle');
+      const authText = document.getElementById('authText');
+      const skipPasswordBtn = document.getElementById('skipPasswordBtn');
+      const logoutBtn = document.getElementById('logoutBtn');
+      const exportBtn = document.getElementById('exportBtn');
+      const importBtn = document.getElementById('importBtn');
+      const batchBtn = document.getElementById('batchBtn');
+      const lockBtn = document.getElementById('lockBtn');
+      const batchModal = document.getElementById('batchModal');
+      const closeBatchBtn = document.getElementById('closeBatchBtn');
+      const importFileInput = document.getElementById('importFileInput');
+      const batchContent = document.getElementById('batchContent');
+
+      let aviators = [];
+      let currentPassword = '';
+
+      function safeText(value) {
+        return value == null ? '' : String(value);
+      }
+
+      function escapeHtml(value) {
+        return safeText(value)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      }
+
+      function normalizeUrl(value) {
+        const trimmed = safeText(value).trim();
+        if (!trimmed) return '';
+
+        try {
+          const url = new URL(trimmed);
+          return url.href;
+        } catch (error) {
+          if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+            return trimmed;
+          }
+          return '';
+        }
+      }
+
+      function getStoredPassword() {
+        return localStorage.getItem(PASSWORD_KEY) || '';
+      }
+
+      function setStoredPassword(password) {
+        localStorage.setItem(PASSWORD_KEY, password);
+      }
+
+      function clearStoredPassword() {
+        localStorage.removeItem(PASSWORD_KEY);
+      }
+
+      function showAuth(mode) {
+        const hasPassword = !!getStoredPassword();
+        authOverlay.classList.remove('hidden');
+        authForm.reset();
+        authMessage.textContent = '';
+
+        if (mode === 'create' || (!hasPassword && mode !== 'unlock')) {
+          authTitle.textContent = 'Create roster password';
+          authText.textContent = 'Set a password to protect the local roster, or continue without one.';
+          authConfirmPassword.classList.remove('hidden');
+          skipPasswordBtn.classList.remove('hidden');
+          logoutBtn.classList.add('hidden');
+        } else {
+          authTitle.textContent = 'Unlock roster';
+          authText.textContent = 'Enter the roster password to access the app.';
+          authConfirmPassword.classList.add('hidden');
+          skipPasswordBtn.classList.add('hidden');
+          logoutBtn.classList.remove('hidden');
+        }
+      }
+
+      function hideAuth() {
+        authOverlay.classList.add('hidden');
+      }
+
+      async function deriveKey(password) {
+        const encoder = new TextEncoder();
+        const digest = await crypto.subtle.digest('SHA-256', encoder.encode(password));
+        return crypto.subtle.importKey('raw', digest, 'AES-GCM', false, ['encrypt', 'decrypt']);
+      }
+
+      async function encryptText(text, password) {
+        const key = await deriveKey(password);
+        const iv = crypto.getRandomValues(new Uint8Array(12));
+        const encoded = new TextEncoder().encode(text);
+        const encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, encoded);
+        return {
+          iv: bufferToBase64(iv),
+          data: bufferToBase64(new Uint8Array(encrypted))
+        };
+      }
+
+      async function decryptText(payload, password) {
+        const key = await deriveKey(password);
+        const iv = base64ToBuffer(payload.iv);
+        const data = base64ToBuffer(payload.data);
+        const decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, data);
+        return new TextDecoder().decode(decrypted);
+      }
+
+      function bufferToBase64(buffer) {
+        let binary = '';
+        buffer.forEach((byte) => binary += String.fromCharCode(byte));
+        return btoa(binary);
+      }
+
+      function base64ToBuffer(str) {
+        const binary = atob(str);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+          bytes[i] = binary.charCodeAt(i);
+        }
+        return bytes;
+      }
+
+      async function saveRoster() {
+        const rosterJson = JSON.stringify(aviators, null, 2);
+        if (currentPassword) {
+          const encrypted = await encryptText(rosterJson, currentPassword);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify({ encrypted: true, iv: encrypted.iv, data: encrypted.data }));
+        } else {
+          localStorage.setItem(STORAGE_KEY, rosterJson);
+        }
+      }
+
+      async function loadRoster() {
         const raw = localStorage.getItem(STORAGE_KEY);
         if (!raw) return [];
-        return JSON.parse(raw);
-      } catch (e) {
-        console.error("Failed to parse roster", e);
-        return [];
+
+        try {
+          const parsed = JSON.parse(raw);
+          if (parsed && parsed.encrypted && parsed.iv && parsed.data) {
+            if (!currentPassword) return [];
+            const decrypted = await decryptText(parsed, currentPassword);
+            const roster = JSON.parse(decrypted);
+            return Array.isArray(roster) ? roster : [];
+          }
+
+          if (Array.isArray(parsed)) return parsed;
+          return [];
+        } catch (error) {
+          console.error('Unable to load roster', error);
+          return [];
+        }
       }
-    }
 
-    function saveRoster(roster) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(roster));
-    }
+      function renderStats() {
+        const counts = { Duty: 0, Training: 0, 'War Time': 0, KIA: 0, Other: 0 };
+        aviators.forEach((person) => {
+          const key = safeText(person.status);
+          if (counts[key] !== undefined) counts[key] += 1;
+        });
 
-    let roster = loadRoster();
+        document.getElementById('totalCount').textContent = aviators.length;
+        document.getElementById('dutyCount').textContent = counts.Duty;
+        document.getElementById('trainingCount').textContent = counts.Training;
+        document.getElementById('wartimeCount').textContent = counts['War Time'];
+        document.getElementById('kiaCount').textContent = counts.KIA;
+        document.getElementById('otherCount').textContent = counts.Other;
+      }
 
-    // Seed example if empty
-    if (roster.length === 0) {
-      roster = [
-        {
-          id: crypto.randomUUID(),
-          name: "CW4 John Doe",
-          unit: "1-14 AVN",
-          component: "Active",
-          status: "KIA",
-          dedicationUrl: "https://example.com/john-doe",
-          notes: "Vietnam-era Army Aviator, memorial flag dedication."
-        },
-        {
-          id: crypto.randomUUID(),
-          name: "CW3 Jane Smith",
-          unit: "AL ARNG AVN",
-          component: "Guard",
-          status: "Living",
-          dedicationUrl: "https://example.com/jane-smith",
-          notes: "Alabama Army National Guard aviator."
-        }
-      ];
-      saveRoster(roster);
-    }
+      function badgeClass(status) {
+        const normalized = safeText(status).toLowerCase();
+        if (normalized === 'kia') return 'kia';
+        if (normalized === 'duty' || normalized === 'training' || normalized === 'war time') return 'living';
+        return '';
+      }
 
-    // --- Rendering ---
-    const rosterBody = document.getElementById("rosterBody");
-    const statsBar = document.getElementById("statsBar");
-
-    const filterName = document.getElementById("filterName");
-    const filterStatus = document.getElementById("filterStatus");
-    const filterComponent = document.getElementById("filterComponent");
-
-    function computeStats(list) {
-      const total = list.length;
-      const kia = list.filter(a => a.status === "KIA").length;
-      const living = list.filter(a => a.status === "Living").length;
-      const guard = list.filter(a => a.component === "Guard").length;
-      const active = list.filter(a => a.component === "Active").length;
-      const reserve = list.filter(a => a.component === "Reserve").length;
-      return { total, kia, living, guard, active, reserve };
-    }
-
-    function renderStats(list) {
-      const s = computeStats(list);
-      statsBar.innerHTML = `
-        <span class="stat-pill">Total: ${s.total}</span>
-        <span class="stat-pill">KIA: ${s.kia}</span>
-        <span class="stat-pill">Living: ${s.living}</span>
-        <span class="stat-pill">Active: ${s.active}</span>
-        <span class="stat-pill">Guard: ${s.guard}</span>
-        <span class="stat-pill">Reserve: ${s.reserve}</span>
-      `;
-    }
-
-    function applyFilters(list) {
-      const nameVal = filterName.value.trim().toLowerCase();
-      const statusVal = filterStatus.value;
-      const compVal = filterComponent.value;
-
-      return list.filter(a => {
-        if (nameVal && !a.name.toLowerCase().includes(nameVal)) return false;
-        if (statusVal && a.status !== statusVal) return false;
-        if (compVal && a.component !== compVal) return false;
-        return true;
-      });
-    }
-
-    function renderRoster() {
-      const filtered = applyFilters(roster);
-      renderStats(filtered);
-
-      rosterBody.innerHTML = "";
-      filtered.forEach(a => {
-        const tr = document.createElement("tr");
-
-        const tdName = document.createElement("td");
-        tdName.textContent = a.name;
-
-        const tdUnit = document.createElement("td");
-        tdUnit.textContent = `${a.unit || "—"}${a.component ? " (" + a.component + ")" : ""}`;
-
-        const tdStatus = document.createElement("td");
-        const badge = document.createElement("span");
-        badge.className = "badge " + (a.status === "KIA" ? "badge-kia" : "badge-living");
-        badge.textContent = a.status;
-        tdStatus.appendChild(badge);
-
-        const tdQr = document.createElement("td");
-        if (a.dedicationUrl) {
-          const link = document.createElement("a");
-          link.href = a.dedicationUrl;
-          link.target = "_blank";
-          link.textContent = "Open";
-          tdQr.appendChild(link);
-        } else {
-          tdQr.textContent = "—";
+      function generateQrMarkup(url) {
+        if (!url || !safeText(url).trim()) {
+          return '<div class="qr-box"><span style="font-size:12px;color:#7d8b8e;">No URL</span></div>';
         }
 
-        const tdActions = document.createElement("td");
-        const actionsDiv = document.createElement("div");
-        actionsDiv.className = "row-actions";
+        const qr = qrcode(0, 'M');
+        qr.addData(safeText(url).trim());
+        qr.make();
+        return `<div class="qr-box">${qr.createImgTag(6, 0)}</div>`;
+      }
 
-        const qrBtn = document.createElement("button");
-        qrBtn.type = "button";
-        qrBtn.className = "secondary-btn";
-        qrBtn.textContent = "QR";
-        qrBtn.onclick = () => showQrForAviator(a);
+      function getFilteredAviators() {
+        const nameValue = nameFilter.value.trim().toLowerCase();
+        const statusValue = statusFilter.value;
+        const componentValue = componentFilter.value;
 
-        const delBtn = document.createElement("button");
-        delBtn.type = "button";
-        delBtn.className = "secondary-btn";
-        delBtn.textContent = "Delete";
-        delBtn.onclick = () => deleteAviator(a.id);
-
-        actionsDiv.appendChild(qrBtn);
-        actionsDiv.appendChild(delBtn);
-        tdActions.appendChild(actionsDiv);
-
-        tr.appendChild(tdName);
-        tr.appendChild(tdUnit);
-        tr.appendChild(tdStatus);
-        tr.appendChild(tdQr);
-        tr.appendChild(tdActions);
-
-        rosterBody.appendChild(tr);
-      });
-    }
-
-    function deleteAviator(id) {
-      roster = roster.filter(a => a.id !== id);
-      saveRoster(roster);
-      renderRoster();
-    }
-
-    // --- QR handling ---
-    const qrCanvasContainer = document.getElementById("qrCanvasContainer");
-    let qrInstance = null;
-
-    function ensureQrInstance() {
-      if (!qrInstance) {
-        const canvas = document.createElement("canvas");
-        qrCanvasContainer.innerHTML = "";
-        qrCanvasContainer.appendChild(canvas);
-        qrInstance = new QRious({
-          element: canvas,
-          size: 180,
-          level: "H"
+        return aviators.filter((person) => {
+          const matchesName = !nameValue || safeText(person.name).toLowerCase().includes(nameValue);
+          const matchesStatus = !statusValue || person.status === statusValue;
+          const matchesComponent = !componentValue || person.component === componentValue;
+          return matchesName && matchesStatus && matchesComponent;
         });
       }
-      return qrInstance;
-    }
 
-    function updateQrFromUrl(url) {
-      const qr = ensureQrInstance();
-      qr.value = url || "https://example.com";
-    }
+      function renderTable() {
+        const filtered = getFilteredAviators();
 
-    function showQrForAviator(a) {
-      if (!a.dedicationUrl) {
-        alert("This aviator has no dedication URL set.");
-        return;
+        if (filtered.length === 0) {
+          rosterTableBody.innerHTML = `
+            <tr>
+              <td colspan="7">
+                <div class="empty-state">No aviators match the current filters.</div>
+              </td>
+            </tr>
+          `;
+          return;
+        }
+
+        rosterTableBody.innerHTML = filtered.map((person) => {
+          const notes = safeText(person.notes).trim();
+          const dedicationUrl = normalizeUrl(person.dedicationUrl);
+          const urlHtml = dedicationUrl
+            ? `<a class="muted-link" href="${escapeHtml(dedicationUrl)}" target="_blank" rel="noreferrer noopener">View</a><br>${generateQrMarkup(dedicationUrl)}`
+            : '<span style="color:#9fb0b1;">—</span>';
+
+          return `
+            <tr>
+              <td><strong>${escapeHtml(person.name)}</strong></td>
+              <td>${escapeHtml(person.unit)}</td>
+              <td>${escapeHtml(person.component)}</td>
+              <td><span class="badge ${badgeClass(person.status)}">${escapeHtml(person.status)}</span></td>
+              <td>${notes ? escapeHtml(notes) : '<span style="color:#9fb0b1;">—</span>'}</td>
+              <td>${urlHtml}</td>
+              <td><button type="button" class="danger" data-id="${person.id}">Remove</button></td>
+            </tr>
+          `;
+        }).join('');
+
+        rosterTableBody.querySelectorAll('button[data-id]').forEach((button) => {
+          button.addEventListener('click', () => {
+            const id = button.dataset.id;
+            aviators = aviators.filter((person) => person.id !== id);
+            saveRoster();
+            renderAll();
+          });
+        });
       }
-      updateQrFromUrl(a.dedicationUrl);
-    }
 
-    // --- Form handling ---
-    const aviatorForm = document.getElementById("aviatorForm");
-    const previewQrBtn = document.getElementById("previewQrBtn");
-    const dedicationUrlInput = document.getElementById("dedicationUrl");
-
-    previewQrBtn.addEventListener("click", () => {
-      const url = dedicationUrlInput.value.trim();
-      if (!url) {
-        alert("Enter a dedication URL first.");
-        return;
-      }
-      updateQrFromUrl(url);
-    });
-
-    aviatorForm.addEventListener("submit", (e) => {
-      e.preventDefault();
-      const name = document.getElementById("aviatorName").value.trim();
-      const unit = document.getElementById("unit").value.trim();
-      const component = document.getElementById("component").value || "";
-      const status = document.getElementById("status").value || "Living";
-      const dedicationUrl = dedicationUrlInput.value.trim();
-      const notes = document.getElementById("notes").value.trim();
-
-      if (!name) {
-        alert("Name is required.");
-        return;
+      function renderAll() {
+        renderStats();
+        renderTable();
       }
 
-      const newAviator = {
-        id: crypto.randomUUID(),
-        name,
-        unit,
-        component,
-        status,
-        dedicationUrl,
-        notes
-      };
+      async function handleAddAviator(event) {
+        event.preventDefault();
 
-      roster.push(newAviator);
-      saveRoster(roster);
-      renderRoster();
+        const formData = new FormData(aviatorForm);
+        const name = safeText(formData.get('name')).trim();
+        const unit = safeText(formData.get('unit')).trim();
+        const component = safeText(formData.get('component')).trim();
+        const status = safeText(formData.get('status')).trim();
+        const dedicationUrl = safeText(formData.get('dedicationUrl')).trim();
+        const notes = safeText(formData.get('notes')).trim();
 
-      aviatorForm.reset();
-      qrCanvasContainer.innerHTML = "";
-      qrInstance = null;
-    });
+        if (!name || !unit || !component || !status) {
+          alert('Please complete the required fields.');
+          return;
+        }
 
-    // --- Filters events ---
-    [filterName, filterStatus, filterComponent].forEach(el => {
-      el.addEventListener("input", renderRoster);
-      el.addEventListener("change", renderRoster);
-    });
+        aviators.unshift({
+          id: crypto.randomUUID ? crypto.randomUUID() : `aviator-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+          name,
+          unit,
+          component,
+          status,
+          dedicationUrl,
+          notes,
+        });
 
-    // Initial render
-    renderRoster();
-  </script>
-</body>
+        await saveRoster();
+        aviatorForm.reset();
+        renderAll();
+      }
+
+      function closeBatchModal() {
+        batchModal.classList.remove('visible');
+        batchModal.setAttribute('aria-hidden', 'true');
+      }
+
+      function openBatchModal() {
+        const withUrls = aviators.filter((person) => person.dedicationUrl && person.dedicationUrl.trim());
+
+        if (withUrls.length === 0) {
+          batchContent.innerHTML = '<div class="empty-state">No dedication URLs are available for QR generation.</div>';
+        } else {
+          batchContent.innerHTML = withUrls.map((person) => {
+            const qr = qrcode(0, 'M');
+            qr.addData(person.dedicationUrl.trim());
+            qr.make();
+            return `
+              <div class="batch-item">
+                ${qr.createImgTag(6, 0)}
+                <h4>${escapeHtml(person.name)}</h4>
+              </div>
+            `;
+          }).join('');
+        }
+
+        batchModal.classList.add('visible');
+        batchModal.setAttribute('aria-hidden', 'false');
+      }
+
+      function exportRoster() {
+        const json = JSON.stringify(aviators, null, 2);
+        const fileBlob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(fileBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'flag-remembrance-roster.json';
+        link.click();
+        URL.revokeObjectURL(url);
+      }
+
+      function handleImportFile(event) {
+        const file = event.target.files && event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async () => {
+          try {
+            const parsed = JSON.parse(String(reader.result));
+            if (!Array.isArray(parsed)) {
+              alert('Imported file must be a JSON array of aviators.');
+              return;
+            }
+
+            aviators = parsed.map((person) => ({
+              id: person.id || `aviator-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+              name: safeText(person.name),
+              unit: safeText(person.unit),
+              component: safeText(person.component),
+              status: safeText(person.status),
+              dedicationUrl: safeText(person.dedicationUrl),
+              notes: safeText(person.notes)
+            }));
+
+            await saveRoster();
+            renderAll();
+          } catch (error) {
+            console.error('Unable to import roster', error);
+            alert('The selected file is not valid JSON for this roster.');
+          } finally {
+            importFileInput.value = '';
+          }
+        };
+
+        reader.readAsText(file);
+      }
+
+      async function unlockApp() {
+        const password = authPassword.value.trim();
+        const hasPassword = !!getStoredPassword();
+
+        if (!hasPassword) {
+          const confirm = authConfirmPassword.value.trim();
+          if (!password && !confirm) {
+            currentPassword = '';
+            hideAuth();
+            aviators = await loadRoster();
+            renderAll();
+            return;
+          }
+          if (!password || password.length < 4) {
+            authMessage.textContent = 'Password must be at least 4 characters, or leave it blank to continue without protection.';
+            return;
+          }
+          if (password !== confirm) {
+            authMessage.textContent = 'Passwords do not match.';
+            return;
+          }
+          setStoredPassword(password);
+          currentPassword = password;
+          hideAuth();
+          aviators = await loadRoster();
+          renderAll();
+          return;
+        }
+
+        if (password !== getStoredPassword()) {
+          authMessage.textContent = 'Incorrect password.';
+          return;
+        }
+
+        currentPassword = password;
+        hideAuth();
+        aviators = await loadRoster();
+        renderAll();
+      }
+
+      async function skipPasswordAccess() {
+        currentPassword = '';
+        hideAuth();
+        aviators = await loadRoster();
+        renderAll();
+      }
+
+      function lockApp() {
+        currentPassword = '';
+        clearStoredPassword();
+        aviators = [];
+        renderAll();
+        showAuth('create');
+      }
+
+      function bindEvents() {
+        authForm.addEventListener('submit', async (event) => {
+          event.preventDefault();
+          await unlockApp();
+        });
+
+        skipPasswordBtn.addEventListener('click', async () => {
+          await skipPasswordAccess();
+        });
+
+        logoutBtn.addEventListener('click', () => {
+          currentPassword = '';
+          hideAuth();
+          showAuth('unlock');
+        });
+
+        lockBtn.addEventListener('click', () => {
+          lockApp();
+        });
+
+        exportBtn.addEventListener('click', exportRoster);
+        importBtn.addEventListener('click', () => importFileInput.click());
+        importFileInput.addEventListener('change', handleImportFile);
+        batchBtn.addEventListener('click', openBatchModal);
+        closeBatchBtn.addEventListener('click', closeBatchModal);
+        batchModal.addEventListener('click', (event) => {
+          if (event.target === batchModal) closeBatchModal();
+        });
+
+        aviatorForm.addEventListener('submit', handleAddAviator);
+        [nameFilter, statusFilter, componentFilter].forEach((element) => {
+          element.addEventListener('input', renderTable);
+          element.addEventListener('change', renderTable);
+        });
+      }
+
+      bindEvents();
+      const savedPassword = getStoredPassword();
+      if (savedPassword) {
+        currentPassword = savedPassword;
+        showAuth('unlock');
+      } else {
+        showAuth('create');
+      }
+    </script>
+  </body>
 </html>

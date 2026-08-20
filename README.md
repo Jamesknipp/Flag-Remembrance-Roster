@@ -1,72 +1,70 @@
-# Flag Remembrance Roster (Private Repository)
+# Flag Remembrance Roster
 
-This is a private, local-use web application for maintaining a personal roster of Army Aviators, including flag dedications, memorial links, and QR codes for engraving or display.
+A fully local roster app for tracking aviators, their unit assignments, service status, and dedication links. The app stores data in the browser with encrypted localStorage, generates QR codes for dedication URLs, and supports import/export for roster backups.
 
-The app is intentionally lightweight, secure, and offline-friendly. All aviator data is stored **locally in your browser** using `localStorage`, ensuring no personal or memorial information is uploaded to GitHub or shared publicly.
+## Features
 
----
+- Add aviators with name, unit, component, status, notes, and dedication URL
+- Save roster data locally in the browser with a passcode gate
+- Encrypt roster data in localStorage using the browser Web Crypto API
+- Generate QR codes for each aviator's dedication URL
+- Filter the roster by name, status, and component
+- Show live stats for total, KIA, living, active, guard, and reserve counts
+- Export the roster to JSON
+- Import a roster from JSON
+- Run entirely client-side with no backend
 
-## 🔧 Features
+## Run locally
 
-- Add aviators with:
-  - Name
-  - Unit / Battalion
-  - Component (Active, Guard, Reserve)
-  - Status (Living, KIA)
-  - Dedication URL
-  - Notes
-- Automatic QR code generation for each dedication link
-- Roster table with filters:
-  - Name
-  - Status
-  - Component
-- Stats bar showing totals (KIA, Living, Active, Guard, Reserve)
-- Local-only data storage (nothing leaves your machine)
-- Ready for future deployment when desired
+Because this is a static app, you can launch it directly in a browser or serve it with a local web server.
 
----
+### Option 1: Open directly
 
-## 🛡️ Privacy
+Open `index.html` in your browser.
 
-This repository is **private** and contains only the application code.
+### Option 2: Use a local web server
 
-Your aviator roster data is stored **only in your browser** and is never committed to GitHub.
+From the project folder:
 
----
+```bash
+cd "C:\Users\james\OneDrive\Documents\GitHub\Flag-Remembrance-Roster"
+python -m http.server 8000
+```
 
-## ▶️ Running the App Locally
+Then open:
 
-1. Download or clone this repository.
-2. Open `index.html` in any modern browser (Chrome, Edge, Firefox).
-3. The app runs instantly — no server required.
+```text
+http://localhost:8000
+```
 
----
+If your machine uses `python3` instead, use:
 
-## 🚀 Future Deployment (Optional)
+```bash
+python3 -m http.server 8000
+```
 
-When ready to publish:
+## Security notes
 
-- Switch this repo to **public**, OR
-- Deploy using GitHub Pages, Netlify, or your own domain.
+This app uses encrypted localStorage to protect roster data and displays a password gate before loading the roster. The app remains local-only and does not send data to a server.
 
-The existing `index.html` is already deployable.
+## Deployment later
 
----
+This project can be deployed as a static site on services such as:
 
-## 📦 Optional Enhancements (Future)
+- GitHub Pages
+- Netlify
+- Cloudflare Pages
+- Vercel static hosting
 
-This project can be expanded with:
+## Project structure
 
-- Encrypted local storage
-- Password protection
-- Export/import roster data
-- Backend API (Node, Python, etc.)
-- QR batch generator for plaques
-- Multi-user access (if ever needed)
-
----
-
-## 📌 Notes
-
-This app is designed for personal recordkeeping and memorial documentation.  
-It is intentionally simple, stable, and easy to maintain.
+```text
+Flag-Remembrance-Roster/
+├── index.html
+├── assets/
+├── scripts/
+├── README.md
+├── .gitignore
+├── timezone-clock.html
+└── .git
+```
