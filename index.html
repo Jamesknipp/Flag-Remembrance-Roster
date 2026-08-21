@@ -279,6 +279,16 @@
         object-fit: contain;
       }
 
+      .qr-download {
+        display: block;
+        width: 100%;
+        max-width: 150px;
+        margin: 8px auto 0;
+        padding: 7px 9px;
+        font-size: 0.76rem;
+        line-height: 1.2;
+      }
+
       .empty-state {
         padding: 28px 12px;
         text-align: center;
@@ -332,7 +342,7 @@
 
       .batch-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
         gap: 16px;
       }
 
@@ -347,6 +357,22 @@
       .batch-item h4 {
         margin: 12px 0 0;
         font-size: 0.9rem;
+      }
+
+      .batch-item img {
+        width: 100%;
+        max-width: 180px;
+        height: auto;
+        background: #fff;
+        border-radius: 10px;
+        padding: 8px;
+      }
+
+      .batch-flag-id {
+        margin: 5px 0 0;
+        color: var(--gold-soft);
+        font-size: 0.78rem;
+        letter-spacing: 0.08em;
       }
 
       .auth-overlay {
@@ -763,6 +789,93 @@
         return `<div class="qr-box">${qr.createImgTag(6, 0)}</div>`;
       }
 
+      function getFlagId(person) {
+        const flagMatch = safeText(person.notes).match(/Flag ID:\s*([a-z0-9-]+)/i);
+        return flagMatch ? flagMatch[1].toUpperCase() : safeText(person.id).trim();
+      }
+
+      function safeFilename(value) {
+        return safeText(value)
+          .trim()
+          .replace(/[^a-z0-9]+/gi, '-')
+          .replace(/^-+|-+$/g, '')
+          .slice(0, 70) || 'remembrance';
+      }
+
+      function createLightBurnQrCanvas(url) {
+        const qr = qrcode(0, 'M');
+        qr.addData(url);
+        qr.make();
+
+        const quietZoneModules = 4;
+        const moduleCount = qr.getModuleCount();
+        const totalModules = moduleCount + quietZoneModules * 2;
+        const scale = Math.max(1, Math.floor(1200 / totalModules));
+        const canvasSize = totalModules * scale;
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+
+        canvas.width = canvasSize;
+        canvas.height = canvasSize;
+        context.imageSmoothingEnabled = false;
+        context.fillStyle = '#ffffff';
+        context.fillRect(0, 0, canvasSize, canvasSize);
+        context.fillStyle = '#000000';
+
+        for (let row = 0; row < moduleCount; row += 1) {
+          for (let column = 0; column < moduleCount; column += 1) {
+            if (qr.isDark(row, column)) {
+              context.fillRect(
+                (column + quietZoneModules) * scale,
+                (row + quietZoneModules) * scale,
+                scale,
+                scale
+              );
+            }
+          }
+        }
+
+        return canvas;
+      }
+
+      function downloadLightBurnQr(person) {
+        const dedicationUrl = normalizeUrl(person && person.dedicationUrl);
+        if (!dedicationUrl) {
+          alert('A valid dedication URL is required before downloading a QR code.');
+          return;
+        }
+
+        const flagId = safeFilename(getFlagId(person));
+        const personName = safeFilename(person.name);
+        const canvas = createLightBurnQrCanvas(dedicationUrl);
+        const pngDataUrl = canvas.toDataURL('image/png');
+        const pngBytesString = atob(pngDataUrl.split(',')[1]);
+        const pngBytes = new Uint8Array(pngBytesString.length);
+
+        for (let index = 0; index < pngBytesString.length; index += 1) {
+          pngBytes[index] = pngBytesString.charCodeAt(index);
+        }
+
+        const pngBlob = new Blob([pngBytes], { type: 'image/png' });
+        const downloadUrl = URL.createObjectURL(pngBlob);
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.download = `${flagId}-${personName}-LightBurn-QR.png`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
+      }
+
+      function bindQrDownloadButtons(container) {
+        container.querySelectorAll('button[data-qr-download-id]').forEach((button) => {
+          button.addEventListener('click', () => {
+            const person = aviators.find((candidate) => candidate.id === button.dataset.qrDownloadId);
+            if (person) downloadLightBurnQr(person);
+          });
+        });
+      }
+
       function getFilteredAviators() {
         const nameValue = nameFilter.value.trim().toLowerCase();
         const statusValue = statusFilter.value;
@@ -794,7 +907,7 @@
           const notes = safeText(person.notes).trim();
           const dedicationUrl = normalizeUrl(person.dedicationUrl);
           const urlHtml = dedicationUrl
-            ? `<a class="muted-link" href="${escapeHtml(dedicationUrl)}" target="_blank" rel="noreferrer noopener">View</a><br>${generateQrMarkup(dedicationUrl)}`
+            ? `<a class="muted-link" href="${escapeHtml(dedicationUrl)}" target="_blank" rel="noreferrer noopener">View</a><br>${generateQrMarkup(dedicationUrl)}<button type="button" class="secondary qr-download" data-qr-download-id="${escapeHtml(person.id)}">LightBurn PNG</button>`
             : '<span style="color:#9fb0b1;">—</span>';
 
           return `
@@ -818,6 +931,8 @@
             renderAll();
           });
         });
+
+        bindQrDownloadButtons(rosterTableBody);
       }
 
       function renderAll() {
@@ -875,9 +990,12 @@
               <div class="batch-item">
                 ${qr.createImgTag(6, 0)}
                 <h4>${escapeHtml(person.name)}</h4>
+                <p class="batch-flag-id">${escapeHtml(getFlagId(person))}</p>
+                <button type="button" class="secondary qr-download" data-qr-download-id="${escapeHtml(person.id)}">Download LightBurn PNG</button>
               </div>
             `;
           }).join('');
+          bindQrDownloadButtons(batchContent);
         }
 
         batchModal.classList.add('visible');
