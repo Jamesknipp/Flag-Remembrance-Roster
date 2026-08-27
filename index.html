@@ -487,6 +487,10 @@
                 <input type="url" name="dedicationUrl" placeholder="https://example.com" />
               </label>
               <label>
+                Assigned Flag ID
+                <input type="text" name="assignedFlagId" placeholder="Flag ID (optional)" />
+              </label>
+              <label>
                 Notes
                 <textarea name="notes" placeholder="Service notes, awards, memories, duties, final assignment..."></textarea>
               </label>
@@ -782,7 +786,7 @@
         if (filtered.length === 0) {
           rosterTableBody.innerHTML = `
             <tr>
-              <td colspan="7">
+              <td colspan="8">
                 <div class="empty-state">No aviators match the current filters.</div>
               </td>
             </tr>
@@ -804,6 +808,7 @@
               <td>${escapeHtml(person.component)}</td>
               <td><span class="badge ${badgeClass(person.status)}">${escapeHtml(person.status)}</span></td>
               <td>${notes ? escapeHtml(notes) : '<span style="color:#9fb0b1;">—</span>'}</td>
+              <td>${person.assignedFlagId ? escapeHtml(person.assignedFlagId) : '<span style="color:#9fb0b1;">—</span>'}</td>
               <td>${urlHtml}</td>
               <td><button type="button" class="danger" data-id="${person.id}">Remove</button></td>
             </tr>
@@ -834,6 +839,7 @@
         const component = safeText(formData.get('component')).trim();
         const status = safeText(formData.get('status')).trim();
         const dedicationUrl = safeText(formData.get('dedicationUrl')).trim();
+        const assignedFlagId = safeText(formData.get('assignedFlagId')).trim();
         const notes = safeText(formData.get('notes')).trim();
 
         if (!name || !unit || !component || !status) {
@@ -848,6 +854,7 @@
           component,
           status,
           dedicationUrl,
+          assignedFlagId,
           notes,
         });
 
@@ -915,6 +922,7 @@
               component: safeText(person.component),
               status: safeText(person.status),
               dedicationUrl: safeText(person.dedicationUrl),
+              assignedFlagId: safeText(person.assignedFlagId),
               notes: safeText(person.notes)
             }));
 

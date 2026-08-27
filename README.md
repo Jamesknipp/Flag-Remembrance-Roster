@@ -56,6 +56,10 @@ This project can be deployed as a static site on services such as:
 - Cloudflare Pages
 - Vercel static hosting
 
+## QR assignments
+
+1-22 QR codes have been assigned — Remembered.
+
 ## Project structure
 
 ```text
