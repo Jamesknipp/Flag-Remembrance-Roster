@@ -385,6 +385,51 @@
 
       .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
+      .lock-overlay {
+        position: fixed;
+        inset: 0;
+        background: linear-gradient(135deg, rgba(8, 12, 16, 0.97), rgba(18, 30, 36, 0.97));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        z-index: 70;
+      }
+
+      .lock-overlay.hidden { display: none; }
+
+      .lock-card {
+        width: min(420px, 100%);
+        background: var(--panel-strong);
+        border: 1px solid var(--line-strong);
+        border-radius: 18px;
+        box-shadow: 0 24px 54px var(--shadow);
+        padding: 26px 26px 22px;
+      }
+
+      .lock-card h2 {
+        margin: 0 0 6px;
+        font-size: 1.15rem;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: var(--accent-soft);
+      }
+
+      .lock-message {
+        min-height: 20px;
+        margin-bottom: 10px;
+        font-size: 0.85rem;
+        color: var(--danger);
+      }
+
+      .lock-message.info { color: var(--muted); }
+
+      .settings-section {
+        margin-top: 18px;
+        border-top: 1px solid var(--line);
+        padding-top: 14px;
+      }
+
       .label-sheet { display: none; }
 
       .label-grid {
@@ -418,6 +463,26 @@
     </style>
   </head>
   <body>
+    <div id="lockOverlay" class="lock-overlay hidden">
+      <form id="lockForm" class="lock-card">
+        <h2 id="lockTitle">Unlock inventory</h2>
+        <p id="lockText" class="hint">Enter the passcode for this inventory.</p>
+        <div class="field">
+          <label for="lockPass">Passcode</label>
+          <input id="lockPass" type="password" autocomplete="current-password" />
+        </div>
+        <div class="field" id="lockConfirmField" hidden>
+          <label for="lockConfirm">Confirm passcode</label>
+          <input id="lockConfirm" type="password" autocomplete="new-password" />
+        </div>
+        <div id="lockMessage" class="lock-message"></div>
+        <div class="top-actions">
+          <button id="lockSubmit" class="primary" type="submit">Unlock</button>
+          <button id="lockSkip" class="ghost" type="button" hidden>Continue without a passcode</button>
+        </div>
+      </form>
+    </div>
+
     <div class="app-shell">
       <header class="topbar">
         <div class="topbar-head">
@@ -432,6 +497,7 @@
             <button id="exportCsvBtn" type="button">Export CSV</button>
             <button id="importBtn" type="button">Import JSON</button>
             <button id="settingsBtn" class="ghost" type="button">Settings</button>
+            <button id="lockNowBtn" class="ghost" type="button" hidden>Lock</button>
             <input id="importFile" type="file" accept="application/json,.json" hidden />
           </div>
         </div>
@@ -775,7 +841,31 @@
         </div>
         <div class="top-actions">
           <button id="saveSettingsBtn" class="primary" type="button">Save settings</button>
-          <button id="clearDataBtn" class="danger" type="button">Erase all data</button>
+        </div>
+
+        <div class="settings-section">
+          <h2 style="font-size:0.95rem;text-transform:uppercase;letter-spacing:0.12em;color:var(--accent-soft);margin:0 0 4px;">Passcode protection</h2>
+          <p id="passcodeState" class="hint">Inventory data is stored unencrypted in this browser.</p>
+          <div class="field">
+            <label for="autoLockSelect">Auto-lock after</label>
+            <select id="autoLockSelect">
+              <option value="0">Never</option>
+              <option value="5">5 minutes idle</option>
+              <option value="15">15 minutes idle</option>
+              <option value="30">30 minutes idle</option>
+              <option value="60">60 minutes idle</option>
+            </select>
+          </div>
+          <div class="top-actions">
+            <button id="setPasscodeBtn" type="button">Set passcode</button>
+            <button id="removePasscodeBtn" class="danger" type="button" hidden>Remove passcode</button>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="top-actions">
+            <button id="clearDataBtn" class="danger" type="button">Erase all data</button>
+          </div>
         </div>
       </div>
     </div>
@@ -811,8 +901,17 @@
         'edit': 'Edited'
       };
 
-      let state = { items: [], settings: { baseUrl: '', org: '' } };
+      const PBKDF2_ITERATIONS = 310000;
+
+      let state = { items: [], settings: { baseUrl: '', org: '', autoLockMinutes: 15 } };
       let activeItemId = '';
+      let vaultKey = null;
+      let vaultSalt = null;
+      let encryptionOn = false;
+      let lockMode = 'unlock';
+      let pendingPayload = null;
+      let savePromise = Promise.resolve();
+      let idleTimer = 0;
       let scanStream = null;
       let scanLoopId = 0;
       let scanCanvas = null;
@@ -855,31 +954,119 @@
         return candidate;
       }
 
-      function loadState() {
+      function cryptoAvailable() {
+        return !!(window.crypto && window.crypto.subtle && window.isSecureContext);
+      }
+
+      function bufferToBase64(buffer) {
+        let binary = '';
+        new Uint8Array(buffer).forEach((byte) => { binary += String.fromCharCode(byte); });
+        return btoa(binary);
+      }
+
+      function base64ToBuffer(value) {
+        const binary = atob(safeText(value));
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i += 1) {
+          bytes[i] = binary.charCodeAt(i);
+        }
+        return bytes;
+      }
+
+      async function deriveKey(passcode, salt) {
+        const material = await crypto.subtle.importKey(
+          'raw',
+          new TextEncoder().encode(passcode),
+          'PBKDF2',
+          false,
+          ['deriveKey']
+        );
+        return crypto.subtle.deriveKey(
+          { name: 'PBKDF2', salt: salt, iterations: PBKDF2_ITERATIONS, hash: 'SHA-256' },
+          material,
+          { name: 'AES-GCM', length: 256 },
+          false,
+          ['encrypt', 'decrypt']
+        );
+      }
+
+      async function encryptPayload(text, key, salt) {
+        const iv = crypto.getRandomValues(new Uint8Array(12));
+        const cipher = await crypto.subtle.encrypt(
+          { name: 'AES-GCM', iv: iv },
+          key,
+          new TextEncoder().encode(text)
+        );
+        return {
+          encrypted: true,
+          version: 1,
+          kdf: 'PBKDF2-SHA256',
+          iterations: PBKDF2_ITERATIONS,
+          salt: bufferToBase64(salt),
+          iv: bufferToBase64(iv),
+          data: bufferToBase64(cipher)
+        };
+      }
+
+      async function decryptPayload(payload, key) {
+        const plain = await crypto.subtle.decrypt(
+          { name: 'AES-GCM', iv: base64ToBuffer(payload.iv) },
+          key,
+          base64ToBuffer(payload.data)
+        );
+        return new TextDecoder().decode(plain);
+      }
+
+      function readRawPayload() {
         try {
           const raw = localStorage.getItem(STORAGE_KEY);
-          if (!raw) return;
-          const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed.items)) {
-            state.items = parsed.items.map(normalizeItem);
-          }
-          if (parsed.settings && typeof parsed.settings === 'object') {
-            state.settings.baseUrl = safeText(parsed.settings.baseUrl);
-            state.settings.org = safeText(parsed.settings.org);
-          }
+          return raw ? JSON.parse(raw) : null;
+        } catch (error) {
+          console.error('Could not read saved data', error);
+          return null;
+        }
+      }
+
+      function applyPayloadObject(parsed) {
+        if (!parsed || typeof parsed !== 'object') return;
+        state.items = Array.isArray(parsed.items) ? parsed.items.map(normalizeItem) : [];
+        if (parsed.settings && typeof parsed.settings === 'object') {
+          state.settings.baseUrl = safeText(parsed.settings.baseUrl);
+          state.settings.org = safeText(parsed.settings.org);
+          const minutes = Number(parsed.settings.autoLockMinutes);
+          state.settings.autoLockMinutes = Number.isFinite(minutes) && minutes >= 0 ? minutes : 15;
+        }
+      }
+
+      function loadPlainState() {
+        const parsed = readRawPayload();
+        if (!parsed) return;
+        if (parsed.encrypted) return;
+        try {
+          applyPayloadObject(parsed);
         } catch (error) {
           console.error('Could not read saved data', error);
           toast('Saved data was unreadable and has been ignored.');
         }
       }
 
-      function saveState() {
-        try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-        } catch (error) {
-          console.error('Could not save data', error);
-          toast('Browser storage is full or blocked; changes were not saved.');
+      async function persistState() {
+        const json = JSON.stringify(state);
+        let record = json;
+        if (encryptionOn && vaultKey && vaultSalt) {
+          record = JSON.stringify(await encryptPayload(json, vaultKey, vaultSalt));
         }
+        localStorage.setItem(STORAGE_KEY, record);
+      }
+
+      function saveState() {
+        savePromise = savePromise
+          .then(persistState)
+          .catch((error) => {
+            console.error('Could not save data', error);
+            toast('Changes could not be saved to this browser.');
+          });
+        return savePromise;
       }
 
       function normalizeItem(raw) {
@@ -1630,15 +1817,41 @@
         openDetail(item.id);
       }
 
+      function renderPasscodeState() {
+        const label = document.getElementById('passcodeState');
+        const removeBtn = document.getElementById('removePasscodeBtn');
+        const setBtn = document.getElementById('setPasscodeBtn');
+        const lockNowBtn = document.getElementById('lockNowBtn');
+
+        if (encryptionOn) {
+          label.textContent = 'Inventory data is encrypted in this browser with AES-GCM. The passcode is never stored.';
+          setBtn.textContent = 'Change passcode';
+          removeBtn.hidden = false;
+          lockNowBtn.hidden = false;
+        } else {
+          label.textContent = cryptoAvailable()
+            ? 'Inventory data is stored unencrypted in this browser.'
+            : 'Passcode protection needs a secure page. Serve this file over https:// or http://localhost.';
+          setBtn.textContent = 'Set passcode';
+          setBtn.disabled = !cryptoAvailable();
+          removeBtn.hidden = true;
+          lockNowBtn.hidden = true;
+        }
+      }
+
       function openSettings() {
         document.getElementById('baseUrlInput').value = state.settings.baseUrl;
         document.getElementById('orgInput').value = state.settings.org;
+        document.getElementById('autoLockSelect').value = String(state.settings.autoLockMinutes);
+        renderPasscodeState();
         openModal('settingsModal');
       }
 
       function saveSettings() {
         state.settings.baseUrl = document.getElementById('baseUrlInput').value.trim();
         state.settings.org = document.getElementById('orgInput').value.trim();
+        state.settings.autoLockMinutes = Number(document.getElementById('autoLockSelect').value) || 0;
+        resetIdleTimer();
         saveState();
         renderAll();
         if (activeItemId) renderDetail();
@@ -1648,8 +1861,13 @@
 
       function clearAllData() {
         if (!window.confirm('Erase every item and setting stored in this browser?')) return;
-        state = { items: [], settings: { baseUrl: '', org: '' } };
+        state = { items: [], settings: { baseUrl: '', org: '', autoLockMinutes: 15 } };
         activeItemId = '';
+        encryptionOn = false;
+        vaultKey = null;
+        vaultSalt = null;
+        pendingPayload = null;
+        renderPasscodeState();
         localStorage.removeItem(STORAGE_KEY);
         renderAll();
         closeModal('settingsModal');
@@ -1682,6 +1900,7 @@
       }
 
       function handleDeepLink() {
+        if (encryptionOn && !vaultKey) return;
         const match = window.location.hash.match(/item=([^&]+)/i);
         if (!match) return;
         const id = decodeURIComponent(match[1]).toUpperCase();
@@ -1691,6 +1910,161 @@
         } else {
           toast('Asset ' + id + ' is not in this browser’s inventory.');
         }
+      }
+
+      function showLock(mode) {
+        lockMode = mode;
+        const overlay = document.getElementById('lockOverlay');
+        const title = document.getElementById('lockTitle');
+        const text = document.getElementById('lockText');
+        const submit = document.getElementById('lockSubmit');
+        const skip = document.getElementById('lockSkip');
+
+        document.getElementById('lockForm').reset();
+        document.getElementById('lockMessage').textContent = '';
+        document.getElementById('lockMessage').classList.remove('info');
+        document.getElementById('lockConfirmField').hidden = mode === 'unlock';
+        submit.disabled = false;
+
+        if (mode === 'unlock') {
+          title.textContent = 'Unlock inventory';
+          text.textContent = 'This inventory is encrypted. Enter its passcode to continue.';
+          submit.textContent = 'Unlock';
+          skip.hidden = true;
+          if (!cryptoAvailable()) {
+            setLockMessage('This page must be served over https:// or http://localhost to decrypt data.', true);
+            submit.disabled = true;
+          }
+        } else {
+          title.textContent = encryptionOn ? 'Change passcode' : 'Set a passcode';
+          text.textContent = 'The passcode encrypts this inventory in the browser. It is never stored, so it cannot be recovered.';
+          submit.textContent = encryptionOn ? 'Change passcode' : 'Encrypt inventory';
+          skip.hidden = encryptionOn;
+        }
+
+        overlay.classList.remove('hidden');
+        window.setTimeout(() => document.getElementById('lockPass').focus(), 50);
+      }
+
+      function hideLock() {
+        document.getElementById('lockOverlay').classList.add('hidden');
+        document.getElementById('lockForm').reset();
+      }
+
+      function setLockMessage(message, isInfo) {
+        const node = document.getElementById('lockMessage');
+        node.textContent = message;
+        node.classList.toggle('info', !!isInfo);
+      }
+
+      async function handleLockSubmit(event) {
+        event.preventDefault();
+        const submit = document.getElementById('lockSubmit');
+        const passcode = document.getElementById('lockPass').value;
+
+        if (!passcode) {
+          setLockMessage('Enter a passcode.');
+          return;
+        }
+
+        if (!cryptoAvailable()) {
+          setLockMessage('This page must be served over https:// or http://localhost to use a passcode.');
+          return;
+        }
+
+        const originalLabel = submit.textContent;
+        submit.disabled = true;
+        submit.textContent = 'Working...';
+        setLockMessage('', true);
+
+        try {
+          if (lockMode === 'unlock') {
+            const salt = base64ToBuffer(pendingPayload.salt);
+            const key = await deriveKey(passcode, salt);
+            let plain = '';
+            try {
+              plain = await decryptPayload(pendingPayload, key);
+            } catch (error) {
+              setLockMessage('That passcode did not work.');
+              return;
+            }
+            applyPayloadObject(JSON.parse(plain));
+            vaultKey = key;
+            vaultSalt = salt;
+            encryptionOn = true;
+            pendingPayload = null;
+            hideLock();
+            renderAll();
+            renderPasscodeState();
+            resetIdleTimer();
+            handleDeepLink();
+            toast('Inventory unlocked.');
+            return;
+          }
+
+          const confirmValue = document.getElementById('lockConfirm').value;
+          if (passcode.length < 4) {
+            setLockMessage('Use at least 4 characters.');
+            return;
+          }
+          if (passcode !== confirmValue) {
+            setLockMessage('The two passcodes do not match.');
+            return;
+          }
+
+          vaultSalt = crypto.getRandomValues(new Uint8Array(16));
+          vaultKey = await deriveKey(passcode, vaultSalt);
+          encryptionOn = true;
+          await saveState();
+          hideLock();
+          renderPasscodeState();
+          resetIdleTimer();
+          toast('Inventory encrypted. Keep the passcode safe: it cannot be recovered.');
+        } finally {
+          submit.disabled = false;
+          submit.textContent = originalLabel;
+        }
+      }
+
+      function skipPasscode() {
+        hideLock();
+        toast('Continuing without a passcode. You can set one later in Settings.');
+      }
+
+      function lockNow() {
+        if (!encryptionOn) return;
+        pendingPayload = readRawPayload();
+        if (!pendingPayload || !pendingPayload.encrypted) {
+          toast('Nothing is encrypted yet.');
+          return;
+        }
+        vaultKey = null;
+        activeItemId = '';
+        state.items = [];
+        document.querySelectorAll('.modal-backdrop.open').forEach((node) => node.classList.remove('open'));
+        window.clearTimeout(idleTimer);
+        renderAll();
+        showLock('unlock');
+      }
+
+      function resetIdleTimer() {
+        window.clearTimeout(idleTimer);
+        if (!encryptionOn || !vaultKey) return;
+        const minutes = Number(state.settings.autoLockMinutes) || 0;
+        if (minutes <= 0) return;
+        idleTimer = window.setTimeout(lockNow, minutes * 60 * 1000);
+      }
+
+      function removePasscode() {
+        if (!encryptionOn) return;
+        if (!window.confirm('Remove the passcode and store this inventory unencrypted?')) return;
+        encryptionOn = false;
+        vaultKey = null;
+        vaultSalt = null;
+        window.clearTimeout(idleTimer);
+        saveState();
+        renderPasscodeState();
+        toast('Passcode removed. Data is now stored unencrypted.');
       }
 
       function bindEvents() {
@@ -1755,6 +2129,26 @@
         document.getElementById('saveSettingsBtn').addEventListener('click', saveSettings);
         document.getElementById('clearDataBtn').addEventListener('click', clearAllData);
 
+        document.getElementById('lockForm').addEventListener('submit', handleLockSubmit);
+        document.getElementById('lockSkip').addEventListener('click', skipPasscode);
+        document.getElementById('lockNowBtn').addEventListener('click', lockNow);
+        document.getElementById('setPasscodeBtn').addEventListener('click', () => {
+          closeModal('settingsModal');
+          showLock('create');
+        });
+        document.getElementById('removePasscodeBtn').addEventListener('click', removePasscode);
+        document.getElementById('autoLockSelect').addEventListener('change', (event) => {
+          state.settings.autoLockMinutes = Number(event.target.value) || 0;
+          resetIdleTimer();
+          saveState();
+        });
+
+        ['pointerdown', 'keydown'].forEach((eventName) => {
+          document.addEventListener(eventName, () => {
+            if (encryptionOn && vaultKey) resetIdleTimer();
+          });
+        });
+
         document.querySelectorAll('.modal-backdrop').forEach((backdrop) => {
           backdrop.addEventListener('click', (event) => {
             if (event.target !== backdrop) return;
@@ -1768,6 +2162,7 @@
 
         document.addEventListener('keydown', (event) => {
           if (event.key !== 'Escape') return;
+          if (!document.getElementById('lockOverlay').classList.contains('hidden')) return;
           if (document.getElementById('scanModal').classList.contains('open')) {
             stopScanner();
             return;
@@ -1790,11 +2185,27 @@
         document.head.appendChild(fallback);
       }
 
-      loadState();
-      bindEvents();
-      renderAll();
-      ensureQrLibrary();
-      handleDeepLink();
+      function boot() {
+        bindEvents();
+
+        const stored = readRawPayload();
+        if (stored && stored.encrypted) {
+          pendingPayload = stored;
+          encryptionOn = true;
+          renderAll();
+          ensureQrLibrary();
+          showLock('unlock');
+          return;
+        }
+
+        loadPlainState();
+        renderAll();
+        renderPasscodeState();
+        ensureQrLibrary();
+        handleDeepLink();
+      }
+
+      boot();
     </script>
   </body>
 </html>

@@ -36,15 +36,39 @@ Tag any physical item with a QR code and track where it is, who has it, and what
 - Print a sheet of QR labels for the current filter, or a single label, and download any QR code as a high-resolution PNG
 - Export to JSON or CSV, and import JSON back (matching asset IDs are updated, new ones are added)
 - Point QR codes at a hosted copy of the app so a phone camera opens the item page directly
+- Optional passcode protection that encrypts the whole inventory in the browser, with idle auto-lock
 - Runs entirely client-side with no backend, and works offline - the QR libraries are vendored in `assets/vendor/`
 
 ### Deep links
 
 When a base URL is set in Settings, each QR code encodes `BASE#item=ASSET-ID`. Opening that link loads the tracker and jumps straight to the item. With no base URL set, the QR code contains the bare asset ID, which is the better choice for scanning with a handheld barcode reader.
 
+### Passcode protection
+
+Set a passcode under **Settings > Passcode protection** to encrypt the inventory:
+
+- The key is derived from the passcode with PBKDF2-SHA256 (310,000 iterations) over a random 16-byte salt.
+- Data is encrypted with AES-256-GCM under a fresh random IV on every save.
+- The passcode itself is never written to disk - only the salt, IV, and ciphertext are stored - so a wrong passcode simply fails to decrypt and there is no recovery path if it is lost.
+- The inventory locks on reload, on **Lock**, and after an idle timeout you choose (default 15 minutes). While locked, no item data is loaded into the page.
+
+Passcode protection uses the Web Crypto API, which browsers expose only in a secure context. Serve the app over HTTPS or `http://localhost` for it to be available; opening the file directly from disk will not work.
+
+The protection is real but bounded: it secures data at rest against someone who reads the browser profile, not against someone who already has the unlocked machine, and a weak passcode can still be attacked offline. Choose a passcode accordingly.
+
 ### Data and privacy
 
-Items live in this browser's `localStorage` under `qr-asset-tracker-v1`. Data is not encrypted and does not leave the machine, so use the JSON export for backups and treat a shared computer accordingly.
+Items live in this browser's `localStorage` under `qr-asset-tracker-v1`, and never leave the machine. Note that JSON and CSV exports are written in plain text so other tools can read them - store them accordingly.
+
+Data is per browser and per device. Two phones scanning the same tag each see their own inventory unless you move a JSON export between them; a shared, always-current inventory needs a real backend.
+
+### Using the data in Excel or Power BI
+
+**Excel.** Use **Export CSV** and open it directly. For a report you refresh regularly, put the exported file in a fixed folder (OneDrive or a network share) and load it with *Data > Get Data > From Text/CSV* rather than opening it by hand - Power Query remembers the shaping, so a re-export plus **Refresh All** rebuilds the report.
+
+**Power BI.** Point *Get Data > Text/CSV* (or *SharePoint folder*, if the exports land in SharePoint or OneDrive) at the same file. A file in SharePoint or OneDrive for Business can be refreshed in the Power BI service on a schedule with no on-premises gateway; a file on a local disk needs one.
+
+Both routes are snapshot-based: the report is only as current as the last export. For live dashboards or several people scanning at once, the data has to live somewhere shared rather than in a browser - see the notes below.
 
 ## Run locally
 
