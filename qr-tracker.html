@@ -1,0 +1,2211 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>QR Asset Tracker</title>
+    <style>
+      :root {
+        --bg-1: #0b1016;
+        --bg-2: #131c24;
+        --panel: rgba(19, 27, 35, 0.86);
+        --panel-strong: rgba(24, 34, 44, 0.96);
+        --panel-alt: rgba(14, 20, 26, 0.9);
+        --line: rgba(110, 190, 200, 0.26);
+        --line-strong: rgba(110, 190, 200, 0.55);
+        --text: #eaf2f4;
+        --muted: #9fb3bb;
+        --accent: #57c2cf;
+        --accent-strong: #3aa4b2;
+        --accent-soft: #a9e5ec;
+        --amber: #e0b25c;
+        --danger: #e07a72;
+        --success: #6fbb92;
+        --violet: #9b8bd6;
+        --shadow: rgba(0, 0, 0, 0.42);
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Segoe UI", Arial, sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at top, rgba(87, 194, 207, 0.12), transparent 30%),
+          linear-gradient(135deg, var(--bg-1) 0%, var(--bg-2) 50%, #17252c 100%);
+      }
+
+      button, input, select, textarea { font: inherit; }
+
+      .app-shell {
+        max-width: 1480px;
+        margin: 0 auto;
+        padding: 26px 20px 60px;
+      }
+
+      .topbar {
+        background: rgba(16, 23, 30, 0.82);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        box-shadow: 0 16px 32px var(--shadow);
+        padding: 20px 22px;
+        backdrop-filter: blur(10px);
+      }
+
+      .topbar-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        flex-wrap: wrap;
+      }
+
+      .topbar h1 {
+        margin: 0;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        font-size: clamp(1.7rem, 2.6vw, 2.4rem);
+      }
+
+      .topbar p { margin: 8px 0 0; color: var(--muted); }
+
+      .top-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+      button {
+        cursor: pointer;
+        border-radius: 10px;
+        border: 1px solid var(--line);
+        background: rgba(30, 42, 52, 0.9);
+        color: var(--text);
+        padding: 9px 15px;
+        transition: border-color 0.15s ease, transform 0.15s ease, background 0.15s ease;
+      }
+
+      button:hover { border-color: var(--line-strong); transform: translateY(-1px); }
+      button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+      button.primary {
+        background: linear-gradient(135deg, var(--accent-strong), var(--accent));
+        border-color: transparent;
+        color: #06222a;
+        font-weight: 700;
+      }
+
+      button.ghost { background: transparent; }
+      button.danger { border-color: rgba(224, 122, 114, 0.55); color: #f4c3bf; }
+      button.small { padding: 5px 10px; font-size: 0.82rem; border-radius: 8px; }
+
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 12px;
+        margin-top: 18px;
+      }
+
+      .stat {
+        background: var(--panel-alt);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 12px 14px;
+      }
+
+      .stat span {
+        display: block;
+        font-size: 0.72rem;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+
+      .stat strong { font-size: 1.6rem; display: block; margin-top: 4px; }
+      .stat.accent strong { color: var(--accent-soft); }
+      .stat.amber strong { color: var(--amber); }
+      .stat.danger strong { color: var(--danger); }
+      .stat.success strong { color: var(--success); }
+
+      .layout {
+        display: grid;
+        grid-template-columns: minmax(320px, 380px) 1fr;
+        gap: 18px;
+        margin-top: 18px;
+        align-items: start;
+      }
+
+      @media (max-width: 1080px) {
+        .layout { grid-template-columns: 1fr; }
+      }
+
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        box-shadow: 0 14px 30px var(--shadow);
+        padding: 18px 20px;
+        backdrop-filter: blur(10px);
+      }
+
+      .card h2 {
+        margin: 0 0 4px;
+        font-size: 1.05rem;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: var(--accent-soft);
+      }
+
+      .card .hint { margin: 0 0 14px; color: var(--muted); font-size: 0.85rem; }
+
+      .field { margin-bottom: 12px; }
+      .field label {
+        display: block;
+        font-size: 0.74rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 5px;
+      }
+
+      input, select, textarea {
+        width: 100%;
+        background: rgba(10, 15, 20, 0.75);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        color: var(--text);
+        padding: 9px 11px;
+      }
+
+      input:focus, select:focus, textarea:focus {
+        outline: none;
+        border-color: var(--line-strong);
+        box-shadow: 0 0 0 2px rgba(87, 194, 207, 0.18);
+      }
+
+      textarea { min-height: 68px; resize: vertical; }
+
+      .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+      .filters {
+        display: grid;
+        grid-template-columns: 2fr repeat(3, 1fr);
+        gap: 10px;
+        margin-bottom: 14px;
+      }
+
+      @media (max-width: 720px) {
+        .filters { grid-template-columns: 1fr 1fr; }
+        .grid-2 { grid-template-columns: 1fr; }
+      }
+
+      .table-wrap { overflow-x: auto; }
+
+      table { width: 100%; border-collapse: collapse; min-width: 900px; }
+
+      th, td {
+        text-align: left;
+        padding: 10px 12px;
+        border-bottom: 1px solid rgba(110, 190, 200, 0.14);
+        vertical-align: top;
+      }
+
+      th {
+        font-size: 0.72rem;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--muted);
+        white-space: nowrap;
+      }
+
+      tbody tr:hover { background: rgba(87, 194, 207, 0.06); }
+
+      .item-name { font-weight: 600; }
+      .item-meta { color: var(--muted); font-size: 0.8rem; margin-top: 3px; }
+
+      .code {
+        font-family: "Consolas", "Courier New", monospace;
+        letter-spacing: 0.04em;
+        color: var(--accent-soft);
+      }
+
+      .badge {
+        display: inline-block;
+        padding: 3px 9px;
+        border-radius: 999px;
+        font-size: 0.72rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        border: 1px solid var(--line);
+        color: var(--muted);
+        white-space: nowrap;
+      }
+
+      .badge.available { border-color: rgba(111, 187, 146, 0.6); color: #b0e0c5; }
+      .badge.checked-out { border-color: rgba(224, 178, 92, 0.6); color: #f0d49b; }
+      .badge.maintenance { border-color: rgba(155, 139, 214, 0.6); color: #cfc6f0; }
+      .badge.retired { border-color: rgba(159, 179, 187, 0.5); color: var(--muted); }
+      .badge.lost { border-color: rgba(224, 122, 114, 0.6); color: #f4c3bf; }
+
+      .cat-pill {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 6px;
+        font-size: 0.72rem;
+        background: rgba(87, 194, 207, 0.12);
+        border: 1px solid var(--line);
+      }
+
+      .qr-box {
+        width: 64px;
+        height: 64px;
+        background: #fff;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 4px;
+      }
+
+      .qr-box img { width: 100%; height: 100%; image-rendering: pixelated; }
+
+      .row-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+
+      .empty {
+        text-align: center;
+        color: var(--muted);
+        padding: 34px 10px;
+      }
+
+      .modal-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(5, 9, 12, 0.78);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        z-index: 40;
+      }
+
+      .modal-backdrop.open { display: flex; }
+
+      .modal {
+        background: var(--panel-strong);
+        border: 1px solid var(--line-strong);
+        border-radius: 18px;
+        box-shadow: 0 24px 54px var(--shadow);
+        width: min(860px, 100%);
+        max-height: 88vh;
+        overflow-y: auto;
+        padding: 22px 24px;
+      }
+
+      .modal-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 14px;
+        margin-bottom: 16px;
+      }
+
+      .modal-head h3 { margin: 0; font-size: 1.2rem; }
+
+      .detail-grid {
+        display: grid;
+        grid-template-columns: 220px 1fr;
+        gap: 20px;
+      }
+
+      @media (max-width: 700px) {
+        .detail-grid { grid-template-columns: 1fr; }
+      }
+
+      .qr-large {
+        background: #fff;
+        border-radius: 12px;
+        padding: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .qr-large img { width: 100%; image-rendering: pixelated; }
+
+      .kv { display: grid; grid-template-columns: 130px 1fr; gap: 6px 12px; font-size: 0.9rem; }
+      .kv dt { color: var(--muted); font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; padding-top: 2px; }
+      .kv dd { margin: 0; }
+
+      .history {
+        margin-top: 8px;
+        border-top: 1px solid var(--line);
+        padding-top: 10px;
+        max-height: 220px;
+        overflow-y: auto;
+      }
+
+      .history-item {
+        display: flex;
+        gap: 10px;
+        padding: 7px 0;
+        border-bottom: 1px dashed rgba(110, 190, 200, 0.14);
+        font-size: 0.85rem;
+      }
+
+      .history-item time { color: var(--muted); white-space: nowrap; font-size: 0.78rem; }
+
+      #scanVideo {
+        width: 100%;
+        max-height: 320px;
+        border-radius: 12px;
+        background: #000;
+        object-fit: cover;
+      }
+
+      .scan-status {
+        margin-top: 10px;
+        color: var(--muted);
+        font-size: 0.86rem;
+        min-height: 20px;
+      }
+
+      .toast {
+        position: fixed;
+        left: 50%;
+        bottom: 26px;
+        transform: translateX(-50%) translateY(20px);
+        background: var(--panel-strong);
+        border: 1px solid var(--line-strong);
+        border-radius: 12px;
+        padding: 11px 18px;
+        box-shadow: 0 14px 30px var(--shadow);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s ease, transform 0.2s ease;
+        z-index: 60;
+      }
+
+      .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+      .lock-overlay {
+        position: fixed;
+        inset: 0;
+        background: linear-gradient(135deg, rgba(8, 12, 16, 0.97), rgba(18, 30, 36, 0.97));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        z-index: 70;
+      }
+
+      .lock-overlay.hidden { display: none; }
+
+      .lock-card {
+        width: min(420px, 100%);
+        background: var(--panel-strong);
+        border: 1px solid var(--line-strong);
+        border-radius: 18px;
+        box-shadow: 0 24px 54px var(--shadow);
+        padding: 26px 26px 22px;
+      }
+
+      .lock-card h2 {
+        margin: 0 0 6px;
+        font-size: 1.15rem;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: var(--accent-soft);
+      }
+
+      .lock-message {
+        min-height: 20px;
+        margin-bottom: 10px;
+        font-size: 0.85rem;
+        color: var(--danger);
+      }
+
+      .lock-message.info { color: var(--muted); }
+
+      .settings-section {
+        margin-top: 18px;
+        border-top: 1px solid var(--line);
+        padding-top: 14px;
+      }
+
+      .label-sheet { display: none; }
+
+      .label-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+      }
+
+      .label {
+        border: 1px dashed #999;
+        border-radius: 6px;
+        padding: 8px;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        background: #fff;
+        color: #000;
+        break-inside: avoid;
+      }
+
+      .label img { width: 84px; height: 84px; image-rendering: pixelated; }
+      .label .label-text { font-size: 11px; line-height: 1.35; overflow: hidden; }
+      .label .label-text strong { display: block; font-size: 12px; }
+
+      @media print {
+        body { background: #fff; color: #000; }
+        .app-shell, .modal-backdrop, .toast { display: none !important; }
+        .label-sheet { display: block !important; padding: 10px; }
+        .label { border-color: #bbb; }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="lockOverlay" class="lock-overlay hidden">
+      <form id="lockForm" class="lock-card">
+        <h2 id="lockTitle">Unlock inventory</h2>
+        <p id="lockText" class="hint">Enter the passcode for this inventory.</p>
+        <div class="field">
+          <label for="lockPass">Passcode</label>
+          <input id="lockPass" type="password" autocomplete="current-password" />
+        </div>
+        <div class="field" id="lockConfirmField" hidden>
+          <label for="lockConfirm">Confirm passcode</label>
+          <input id="lockConfirm" type="password" autocomplete="new-password" />
+        </div>
+        <div id="lockMessage" class="lock-message"></div>
+        <div class="top-actions">
+          <button id="lockSubmit" class="primary" type="submit">Unlock</button>
+          <button id="lockSkip" class="ghost" type="button" hidden>Continue without a passcode</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="topbar-head">
+          <div>
+            <h1>QR Asset Tracker</h1>
+            <p>Tag, scan, and track retail stock, equipment, and tools. Everything is stored locally in this browser.</p>
+          </div>
+          <div class="top-actions">
+            <button id="scanBtn" class="primary" type="button">Scan QR</button>
+            <button id="printLabelsBtn" type="button">Print labels</button>
+            <button id="exportJsonBtn" type="button">Export JSON</button>
+            <button id="exportCsvBtn" type="button">Export CSV</button>
+            <button id="importBtn" type="button">Import JSON</button>
+            <button id="settingsBtn" class="ghost" type="button">Settings</button>
+            <button id="lockNowBtn" class="ghost" type="button" hidden>Lock</button>
+            <input id="importFile" type="file" accept="application/json,.json" hidden />
+          </div>
+        </div>
+
+        <div class="stats">
+          <div class="stat accent"><span>Total items</span><strong id="statTotal">0</strong></div>
+          <div class="stat success"><span>Available</span><strong id="statAvailable">0</strong></div>
+          <div class="stat amber"><span>Checked out</span><strong id="statCheckedOut">0</strong></div>
+          <div class="stat"><span>Maintenance</span><strong id="statMaintenance">0</strong></div>
+          <div class="stat danger"><span>Lost / retired</span><strong id="statInactive">0</strong></div>
+          <div class="stat"><span>Total value</span><strong id="statValue">$0</strong></div>
+        </div>
+      </header>
+
+      <main class="layout">
+        <section class="card">
+          <h2>Add item</h2>
+          <p class="hint">Each item gets a unique asset ID and its own QR code.</p>
+          <form id="itemForm">
+            <div class="field">
+              <label for="fName">Item name *</label>
+              <input id="fName" name="name" required placeholder="DeWalt impact driver" />
+            </div>
+            <div class="grid-2">
+              <div class="field">
+                <label for="fCategory">Category</label>
+                <select id="fCategory" name="category">
+                  <option value="Tool">Tool</option>
+                  <option value="Equipment">Equipment</option>
+                  <option value="Retail">Retail</option>
+                  <option value="Consumable">Consumable</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="fStatus">Status</label>
+                <select id="fStatus" name="status">
+                  <option value="available">Available</option>
+                  <option value="checked-out">Checked out</option>
+                  <option value="maintenance">Maintenance</option>
+                  <option value="retired">Retired</option>
+                  <option value="lost">Lost</option>
+                </select>
+              </div>
+            </div>
+            <div class="grid-2">
+              <div class="field">
+                <label for="fSku">SKU / part no.</label>
+                <input id="fSku" name="sku" placeholder="DCF887B" />
+              </div>
+              <div class="field">
+                <label for="fSerial">Serial number</label>
+                <input id="fSerial" name="serial" placeholder="SN-449201" />
+              </div>
+            </div>
+            <div class="grid-2">
+              <div class="field">
+                <label for="fLocation">Location</label>
+                <input id="fLocation" name="location" list="locationList" placeholder="Shop A - Bin 12" />
+                <datalist id="locationList"></datalist>
+              </div>
+              <div class="field">
+                <label for="fAssignee">Assigned to</label>
+                <input id="fAssignee" name="assignee" placeholder="Unassigned" />
+              </div>
+            </div>
+            <div class="grid-2">
+              <div class="field">
+                <label for="fQuantity">Quantity</label>
+                <input id="fQuantity" name="quantity" type="number" min="0" step="1" value="1" />
+              </div>
+              <div class="field">
+                <label for="fCost">Unit cost (USD)</label>
+                <input id="fCost" name="unitCost" type="number" min="0" step="0.01" placeholder="0.00" />
+              </div>
+            </div>
+            <div class="grid-2">
+              <div class="field">
+                <label for="fVendor">Vendor</label>
+                <input id="fVendor" name="vendor" placeholder="Acme Supply" />
+              </div>
+              <div class="field">
+                <label for="fPurchased">Purchase date</label>
+                <input id="fPurchased" name="purchaseDate" type="date" />
+              </div>
+            </div>
+            <div class="field">
+              <label for="fNotes">Notes</label>
+              <textarea id="fNotes" name="notes" placeholder="Condition, accessories, calibration due..."></textarea>
+            </div>
+            <div class="top-actions">
+              <button class="primary" type="submit">Add item</button>
+              <button id="seedBtn" class="ghost" type="button">Load sample data</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="card">
+          <h2>Inventory</h2>
+          <p class="hint">Scan a tag or search to find an item, then check it out or back in.</p>
+          <div class="filters">
+            <input id="searchInput" type="search" placeholder="Search name, ID, SKU, serial, location, person..." />
+            <select id="categoryFilter">
+              <option value="">All categories</option>
+              <option value="Tool">Tool</option>
+              <option value="Equipment">Equipment</option>
+              <option value="Retail">Retail</option>
+              <option value="Consumable">Consumable</option>
+              <option value="Other">Other</option>
+            </select>
+            <select id="statusFilter">
+              <option value="">All statuses</option>
+              <option value="available">Available</option>
+              <option value="checked-out">Checked out</option>
+              <option value="maintenance">Maintenance</option>
+              <option value="retired">Retired</option>
+              <option value="lost">Lost</option>
+            </select>
+            <select id="locationFilter">
+              <option value="">All locations</option>
+            </select>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>QR</th>
+                  <th>Item</th>
+                  <th>Category</th>
+                  <th>Status</th>
+                  <th>Location</th>
+                  <th>Assigned to</th>
+                  <th>Qty</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="itemTableBody"></tbody>
+            </table>
+          </div>
+          <div id="emptyState" class="empty">No items yet. Add one on the left or load the sample data.</div>
+        </section>
+      </main>
+    </div>
+
+    <div id="detailModal" class="modal-backdrop" role="dialog" aria-modal="true">
+      <div class="modal">
+        <div class="modal-head">
+          <div>
+            <h3 id="detailTitle">Item</h3>
+            <div id="detailSub" class="item-meta"></div>
+          </div>
+          <button id="detailClose" class="ghost small" type="button">Close</button>
+        </div>
+        <div class="detail-grid">
+          <div>
+            <div id="detailQr" class="qr-large"></div>
+            <div class="top-actions" style="margin-top: 10px;">
+              <button id="downloadQrBtn" class="small" type="button">Download PNG</button>
+              <button id="printOneBtn" class="small" type="button">Print label</button>
+            </div>
+            <div class="field" style="margin-top: 14px;">
+              <label for="detailPayload">QR payload</label>
+              <textarea id="detailPayload" readonly style="min-height:56px;font-size:0.78rem;"></textarea>
+            </div>
+          </div>
+          <div>
+            <dl id="detailFacts" class="kv"></dl>
+
+            <h2 style="margin-top:18px;">Log activity</h2>
+            <div class="grid-2">
+              <div class="field">
+                <label for="actionSelect">Action</label>
+                <select id="actionSelect">
+                  <option value="check-out">Check out</option>
+                  <option value="check-in">Check in</option>
+                  <option value="move">Move location</option>
+                  <option value="maintenance">Send to maintenance</option>
+                  <option value="retire">Retire</option>
+                  <option value="lost">Mark lost</option>
+                  <option value="note">Note only</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="actionActor">Person</label>
+                <input id="actionActor" placeholder="Who is doing this" />
+              </div>
+            </div>
+            <div class="grid-2">
+              <div class="field">
+                <label for="actionLocation">Location</label>
+                <input id="actionLocation" placeholder="Where it is going" />
+              </div>
+              <div class="field">
+                <label for="actionNote">Note</label>
+                <input id="actionNote" placeholder="Optional detail" />
+              </div>
+            </div>
+            <div class="top-actions">
+              <button id="applyActionBtn" class="primary" type="button">Log it</button>
+              <button id="editItemBtn" type="button">Edit details</button>
+              <button id="deleteItemBtn" class="danger" type="button">Delete item</button>
+            </div>
+
+            <h2 style="margin-top:18px;">History</h2>
+            <div id="detailHistory" class="history"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="editModal" class="modal-backdrop" role="dialog" aria-modal="true">
+      <div class="modal">
+        <div class="modal-head">
+          <h3>Edit item</h3>
+          <button id="editClose" class="ghost small" type="button">Close</button>
+        </div>
+        <form id="editForm">
+          <div class="grid-2">
+            <div class="field">
+              <label for="eName">Item name *</label>
+              <input id="eName" name="name" required />
+            </div>
+            <div class="field">
+              <label for="eCategory">Category</label>
+              <select id="eCategory" name="category">
+                <option value="Tool">Tool</option>
+                <option value="Equipment">Equipment</option>
+                <option value="Retail">Retail</option>
+                <option value="Consumable">Consumable</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+          </div>
+          <div class="grid-2">
+            <div class="field">
+              <label for="eSku">SKU / part no.</label>
+              <input id="eSku" name="sku" />
+            </div>
+            <div class="field">
+              <label for="eSerial">Serial number</label>
+              <input id="eSerial" name="serial" />
+            </div>
+          </div>
+          <div class="grid-2">
+            <div class="field">
+              <label for="eLocation">Location</label>
+              <input id="eLocation" name="location" />
+            </div>
+            <div class="field">
+              <label for="eAssignee">Assigned to</label>
+              <input id="eAssignee" name="assignee" />
+            </div>
+          </div>
+          <div class="grid-2">
+            <div class="field">
+              <label for="eQuantity">Quantity</label>
+              <input id="eQuantity" name="quantity" type="number" min="0" step="1" />
+            </div>
+            <div class="field">
+              <label for="eCost">Unit cost (USD)</label>
+              <input id="eCost" name="unitCost" type="number" min="0" step="0.01" />
+            </div>
+          </div>
+          <div class="grid-2">
+            <div class="field">
+              <label for="eVendor">Vendor</label>
+              <input id="eVendor" name="vendor" />
+            </div>
+            <div class="field">
+              <label for="ePurchased">Purchase date</label>
+              <input id="ePurchased" name="purchaseDate" type="date" />
+            </div>
+          </div>
+          <div class="grid-2">
+            <div class="field">
+              <label for="eStatus">Status</label>
+              <select id="eStatus" name="status">
+                <option value="available">Available</option>
+                <option value="checked-out">Checked out</option>
+                <option value="maintenance">Maintenance</option>
+                <option value="retired">Retired</option>
+                <option value="lost">Lost</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="eWarranty">Warranty / service due</label>
+              <input id="eWarranty" name="warrantyDate" type="date" />
+            </div>
+          </div>
+          <div class="field">
+            <label for="eNotes">Notes</label>
+            <textarea id="eNotes" name="notes"></textarea>
+          </div>
+          <div class="top-actions">
+            <button class="primary" type="submit">Save changes</button>
+            <button id="editCancel" class="ghost" type="button">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div id="scanModal" class="modal-backdrop" role="dialog" aria-modal="true">
+      <div class="modal" style="width: min(560px, 100%);">
+        <div class="modal-head">
+          <div>
+            <h3>Scan a tag</h3>
+            <div class="item-meta">Point the camera at an asset QR code.</div>
+          </div>
+          <button id="scanClose" class="ghost small" type="button">Close</button>
+        </div>
+        <video id="scanVideo" playsinline muted></video>
+        <div id="scanStatus" class="scan-status"></div>
+        <div class="field" style="margin-top: 10px;">
+          <label for="manualCode">Or type / paste an asset ID</label>
+          <input id="manualCode" placeholder="AST-4F2A91" />
+        </div>
+        <div class="top-actions">
+          <button id="manualLookupBtn" class="primary" type="button">Look up</button>
+          <button id="switchCameraBtn" type="button" disabled>Switch camera</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="settingsModal" class="modal-backdrop" role="dialog" aria-modal="true">
+      <div class="modal" style="width: min(560px, 100%);">
+        <div class="modal-head">
+          <h3>Settings</h3>
+          <button id="settingsClose" class="ghost small" type="button">Close</button>
+        </div>
+        <div class="field">
+          <label for="baseUrlInput">QR link base URL</label>
+          <input id="baseUrlInput" placeholder="https://example.com/qr-tracker.html" />
+          <p class="hint" style="margin-top:6px;">
+            When set, QR codes encode <span class="code">BASE#item=ASSET-ID</span> so a phone camera opens the item.
+            Leave blank to encode the bare asset ID.
+          </p>
+        </div>
+        <div class="field">
+          <label for="orgInput">Organization label (printed on labels)</label>
+          <input id="orgInput" placeholder="Acme Field Services" />
+        </div>
+        <div class="top-actions">
+          <button id="saveSettingsBtn" class="primary" type="button">Save settings</button>
+        </div>
+
+        <div class="settings-section">
+          <h2 style="font-size:0.95rem;text-transform:uppercase;letter-spacing:0.12em;color:var(--accent-soft);margin:0 0 4px;">Passcode protection</h2>
+          <p id="passcodeState" class="hint">Inventory data is stored unencrypted in this browser.</p>
+          <div class="field">
+            <label for="autoLockSelect">Auto-lock after</label>
+            <select id="autoLockSelect">
+              <option value="0">Never</option>
+              <option value="5">5 minutes idle</option>
+              <option value="15">15 minutes idle</option>
+              <option value="30">30 minutes idle</option>
+              <option value="60">60 minutes idle</option>
+            </select>
+          </div>
+          <div class="top-actions">
+            <button id="setPasscodeBtn" type="button">Set passcode</button>
+            <button id="removePasscodeBtn" class="danger" type="button" hidden>Remove passcode</button>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="top-actions">
+            <button id="clearDataBtn" class="danger" type="button">Erase all data</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="labelSheet" class="label-sheet">
+      <h2 id="labelSheetTitle" style="font-size:14px;margin:0 0 10px;"></h2>
+      <div id="labelGrid" class="label-grid"></div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <!-- Vendored locally so the tracker keeps working on a shop floor with no network. -->
+    <script src="assets/vendor/qrcode.js"></script>
+    <script src="assets/vendor/jsQR.js"></script>
+    <script>
+      const STORAGE_KEY = 'qr-asset-tracker-v1';
+      const STATUS_LABELS = {
+        'available': 'Available',
+        'checked-out': 'Checked out',
+        'maintenance': 'Maintenance',
+        'retired': 'Retired',
+        'lost': 'Lost'
+      };
+      const ACTION_LABELS = {
+        'created': 'Created',
+        'check-out': 'Checked out',
+        'check-in': 'Checked in',
+        'move': 'Moved',
+        'maintenance': 'Sent to maintenance',
+        'retire': 'Retired',
+        'lost': 'Marked lost',
+        'note': 'Note',
+        'edit': 'Edited'
+      };
+
+      const PBKDF2_ITERATIONS = 310000;
+
+      let state = { items: [], settings: { baseUrl: '', org: '', autoLockMinutes: 15 } };
+      let activeItemId = '';
+      let vaultKey = null;
+      let vaultSalt = null;
+      let encryptionOn = false;
+      let lockMode = 'unlock';
+      let pendingPayload = null;
+      let savePromise = Promise.resolve();
+      let idleTimer = 0;
+      let scanStream = null;
+      let scanLoopId = 0;
+      let scanCanvas = null;
+      let barcodeDetector = null;
+      let cameraDevices = [];
+      let cameraIndex = 0;
+
+      function safeText(value) {
+        return value === undefined || value === null ? '' : String(value);
+      }
+
+      function escapeHtml(value) {
+        return safeText(value)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function toast(message) {
+        const node = document.getElementById('toast');
+        node.textContent = message;
+        node.classList.add('show');
+        window.clearTimeout(toast.timer);
+        toast.timer = window.setTimeout(() => node.classList.remove('show'), 2600);
+      }
+
+      function newAssetId() {
+        const taken = new Set(state.items.map((item) => item.id));
+        let candidate = '';
+        do {
+          const bytes = new Uint8Array(3);
+          crypto.getRandomValues(bytes);
+          candidate = 'AST-' + Array.from(bytes)
+            .map((b) => b.toString(16).padStart(2, '0'))
+            .join('')
+            .toUpperCase();
+        } while (taken.has(candidate));
+        return candidate;
+      }
+
+      function cryptoAvailable() {
+        return !!(window.crypto && window.crypto.subtle && window.isSecureContext);
+      }
+
+      function bufferToBase64(buffer) {
+        let binary = '';
+        new Uint8Array(buffer).forEach((byte) => { binary += String.fromCharCode(byte); });
+        return btoa(binary);
+      }
+
+      function base64ToBuffer(value) {
+        const binary = atob(safeText(value));
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i += 1) {
+          bytes[i] = binary.charCodeAt(i);
+        }
+        return bytes;
+      }
+
+      async function deriveKey(passcode, salt) {
+        const material = await crypto.subtle.importKey(
+          'raw',
+          new TextEncoder().encode(passcode),
+          'PBKDF2',
+          false,
+          ['deriveKey']
+        );
+        return crypto.subtle.deriveKey(
+          { name: 'PBKDF2', salt: salt, iterations: PBKDF2_ITERATIONS, hash: 'SHA-256' },
+          material,
+          { name: 'AES-GCM', length: 256 },
+          false,
+          ['encrypt', 'decrypt']
+        );
+      }
+
+      async function encryptPayload(text, key, salt) {
+        const iv = crypto.getRandomValues(new Uint8Array(12));
+        const cipher = await crypto.subtle.encrypt(
+          { name: 'AES-GCM', iv: iv },
+          key,
+          new TextEncoder().encode(text)
+        );
+        return {
+          encrypted: true,
+          version: 1,
+          kdf: 'PBKDF2-SHA256',
+          iterations: PBKDF2_ITERATIONS,
+          salt: bufferToBase64(salt),
+          iv: bufferToBase64(iv),
+          data: bufferToBase64(cipher)
+        };
+      }
+
+      async function decryptPayload(payload, key) {
+        const plain = await crypto.subtle.decrypt(
+          { name: 'AES-GCM', iv: base64ToBuffer(payload.iv) },
+          key,
+          base64ToBuffer(payload.data)
+        );
+        return new TextDecoder().decode(plain);
+      }
+
+      function readRawPayload() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          return raw ? JSON.parse(raw) : null;
+        } catch (error) {
+          console.error('Could not read saved data', error);
+          return null;
+        }
+      }
+
+      function applyPayloadObject(parsed) {
+        if (!parsed || typeof parsed !== 'object') return;
+        state.items = Array.isArray(parsed.items) ? parsed.items.map(normalizeItem) : [];
+        if (parsed.settings && typeof parsed.settings === 'object') {
+          state.settings.baseUrl = safeText(parsed.settings.baseUrl);
+          state.settings.org = safeText(parsed.settings.org);
+          const minutes = Number(parsed.settings.autoLockMinutes);
+          state.settings.autoLockMinutes = Number.isFinite(minutes) && minutes >= 0 ? minutes : 15;
+        }
+      }
+
+      function loadPlainState() {
+        const parsed = readRawPayload();
+        if (!parsed) return;
+        if (parsed.encrypted) return;
+        try {
+          applyPayloadObject(parsed);
+        } catch (error) {
+          console.error('Could not read saved data', error);
+          toast('Saved data was unreadable and has been ignored.');
+        }
+      }
+
+      async function persistState() {
+        const json = JSON.stringify(state);
+        let record = json;
+        if (encryptionOn && vaultKey && vaultSalt) {
+          record = JSON.stringify(await encryptPayload(json, vaultKey, vaultSalt));
+        }
+        localStorage.setItem(STORAGE_KEY, record);
+      }
+
+      function saveState() {
+        savePromise = savePromise
+          .then(persistState)
+          .catch((error) => {
+            console.error('Could not save data', error);
+            toast('Changes could not be saved to this browser.');
+          });
+        return savePromise;
+      }
+
+      function normalizeItem(raw) {
+        const item = raw && typeof raw === 'object' ? raw : {};
+        const quantity = Number(item.quantity);
+        const unitCost = Number(item.unitCost);
+        return {
+          id: safeText(item.id).trim() || newAssetId(),
+          name: safeText(item.name).trim() || 'Untitled item',
+          category: safeText(item.category).trim() || 'Other',
+          sku: safeText(item.sku).trim(),
+          serial: safeText(item.serial).trim(),
+          location: safeText(item.location).trim(),
+          assignee: safeText(item.assignee).trim(),
+          status: STATUS_LABELS[item.status] ? item.status : 'available',
+          quantity: Number.isFinite(quantity) && quantity >= 0 ? Math.round(quantity) : 1,
+          unitCost: Number.isFinite(unitCost) && unitCost >= 0 ? unitCost : 0,
+          vendor: safeText(item.vendor).trim(),
+          purchaseDate: safeText(item.purchaseDate).trim(),
+          warrantyDate: safeText(item.warrantyDate).trim(),
+          notes: safeText(item.notes),
+          createdAt: safeText(item.createdAt) || new Date().toISOString(),
+          updatedAt: safeText(item.updatedAt) || new Date().toISOString(),
+          history: Array.isArray(item.history)
+            ? item.history.map((entry) => ({
+                ts: safeText(entry && entry.ts) || new Date().toISOString(),
+                action: safeText(entry && entry.action) || 'note',
+                actor: safeText(entry && entry.actor),
+                location: safeText(entry && entry.location),
+                note: safeText(entry && entry.note)
+              }))
+            : []
+        };
+      }
+
+      function findItem(id) {
+        return state.items.find((item) => item.id === id) || null;
+      }
+
+      function qrPayload(item) {
+        const base = safeText(state.settings.baseUrl).trim();
+        if (!base) return item.id;
+        return base.replace(/#.*$/, '') + '#item=' + encodeURIComponent(item.id);
+      }
+
+      function qrReady() {
+        return typeof qrcode === 'function';
+      }
+
+      function qrImgTag(payload, cellSize) {
+        if (!qrReady()) {
+          return '<span style="font-size:10px;color:#7d8b8e;">QR lib missing</span>';
+        }
+        const qr = qrcode(0, 'M');
+        qr.addData(safeText(payload));
+        qr.make();
+        return qr.createImgTag(cellSize, 0);
+      }
+
+      function formatMoney(value) {
+        const number = Number(value) || 0;
+        return '$' + number.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      }
+
+      function formatDateTime(iso) {
+        const date = new Date(iso);
+        if (Number.isNaN(date.getTime())) return safeText(iso);
+        return date.toLocaleString();
+      }
+
+      function renderStats() {
+        const counts = { available: 0, 'checked-out': 0, maintenance: 0, retired: 0, lost: 0 };
+        let value = 0;
+        state.items.forEach((item) => {
+          counts[item.status] = (counts[item.status] || 0) + 1;
+          value += item.unitCost * item.quantity;
+        });
+        document.getElementById('statTotal').textContent = state.items.length;
+        document.getElementById('statAvailable').textContent = counts.available;
+        document.getElementById('statCheckedOut').textContent = counts['checked-out'];
+        document.getElementById('statMaintenance').textContent = counts.maintenance;
+        document.getElementById('statInactive').textContent = counts.retired + counts.lost;
+        document.getElementById('statValue').textContent = formatMoney(value);
+      }
+
+      function uniqueLocations() {
+        const set = new Set();
+        state.items.forEach((item) => {
+          if (item.location) set.add(item.location);
+        });
+        return Array.from(set).sort((a, b) => a.localeCompare(b));
+      }
+
+      function renderLocationOptions() {
+        const locations = uniqueLocations();
+        const filter = document.getElementById('locationFilter');
+        const current = filter.value;
+        filter.innerHTML = '<option value="">All locations</option>' +
+          locations.map((location) => `<option value="${escapeHtml(location)}">${escapeHtml(location)}</option>`).join('');
+        filter.value = locations.includes(current) ? current : '';
+
+        document.getElementById('locationList').innerHTML = locations
+          .map((location) => `<option value="${escapeHtml(location)}"></option>`)
+          .join('');
+      }
+
+      function getFilteredItems() {
+        const search = document.getElementById('searchInput').value.trim().toLowerCase();
+        const category = document.getElementById('categoryFilter').value;
+        const status = document.getElementById('statusFilter').value;
+        const location = document.getElementById('locationFilter').value;
+
+        return state.items.filter((item) => {
+          if (category && item.category !== category) return false;
+          if (status && item.status !== status) return false;
+          if (location && item.location !== location) return false;
+          if (!search) return true;
+          const haystack = [item.id, item.name, item.sku, item.serial, item.location, item.assignee, item.vendor, item.notes]
+            .join(' ')
+            .toLowerCase();
+          return haystack.includes(search);
+        });
+      }
+
+      function renderTable() {
+        const items = getFilteredItems();
+        const body = document.getElementById('itemTableBody');
+        const empty = document.getElementById('emptyState');
+
+        if (!items.length) {
+          body.innerHTML = '';
+          empty.style.display = 'block';
+          empty.textContent = state.items.length
+            ? 'No items match the current filters.'
+            : 'No items yet. Add one on the left or load the sample data.';
+          return;
+        }
+
+        empty.style.display = 'none';
+        body.innerHTML = items
+          .map((item) => {
+            const toggleLabel = item.status === 'checked-out' ? 'Check in' : 'Check out';
+            const toggleAction = item.status === 'checked-out' ? 'check-in' : 'check-out';
+            return `
+              <tr data-id="${escapeHtml(item.id)}">
+                <td><div class="qr-box">${qrImgTag(qrPayload(item), 3)}</div></td>
+                <td>
+                  <div class="item-name">${escapeHtml(item.name)}</div>
+                  <div class="item-meta"><span class="code">${escapeHtml(item.id)}</span>${
+                    item.sku ? ' &middot; SKU ' + escapeHtml(item.sku) : ''
+                  }${item.serial ? ' &middot; SN ' + escapeHtml(item.serial) : ''}</div>
+                </td>
+                <td><span class="cat-pill">${escapeHtml(item.category)}</span></td>
+                <td><span class="badge ${escapeHtml(item.status)}">${escapeHtml(STATUS_LABELS[item.status] || item.status)}</span></td>
+                <td>${escapeHtml(item.location) || '<span class="item-meta">&mdash;</span>'}</td>
+                <td>${escapeHtml(item.assignee) || '<span class="item-meta">&mdash;</span>'}</td>
+                <td>${item.quantity}</td>
+                <td>
+                  <div class="row-actions">
+                    <button class="small" type="button" data-action="toggle" data-toggle="${toggleAction}">${toggleLabel}</button>
+                    <button class="small" type="button" data-action="detail">Details</button>
+                  </div>
+                </td>
+              </tr>`;
+          })
+          .join('');
+      }
+
+      function renderAll() {
+        renderStats();
+        renderLocationOptions();
+        renderTable();
+      }
+
+      function addHistory(item, action, details) {
+        item.history.unshift({
+          ts: new Date().toISOString(),
+          action: action,
+          actor: safeText(details && details.actor).trim(),
+          location: safeText(details && details.location).trim(),
+          note: safeText(details && details.note).trim()
+        });
+        item.updatedAt = new Date().toISOString();
+      }
+
+      function handleAddItem(event) {
+        event.preventDefault();
+        const form = event.target;
+        const data = new FormData(form);
+        const item = normalizeItem({
+          id: newAssetId(),
+          name: data.get('name'),
+          category: data.get('category'),
+          status: data.get('status'),
+          sku: data.get('sku'),
+          serial: data.get('serial'),
+          location: data.get('location'),
+          assignee: data.get('assignee'),
+          quantity: data.get('quantity'),
+          unitCost: data.get('unitCost'),
+          vendor: data.get('vendor'),
+          purchaseDate: data.get('purchaseDate'),
+          notes: data.get('notes'),
+          history: []
+        });
+        addHistory(item, 'created', { actor: item.assignee, location: item.location });
+        state.items.unshift(item);
+        saveState();
+        renderAll();
+        form.reset();
+        document.getElementById('fQuantity').value = '1';
+        toast('Added ' + item.name + ' as ' + item.id);
+        openDetail(item.id);
+      }
+
+      function applyStatusChange(item, action, details) {
+        switch (action) {
+          case 'check-out':
+            item.status = 'checked-out';
+            if (details.actor) item.assignee = details.actor;
+            if (details.location) item.location = details.location;
+            break;
+          case 'check-in':
+            item.status = 'available';
+            item.assignee = '';
+            if (details.location) item.location = details.location;
+            break;
+          case 'move':
+            if (details.location) item.location = details.location;
+            break;
+          case 'maintenance':
+            item.status = 'maintenance';
+            if (details.location) item.location = details.location;
+            break;
+          case 'retire':
+            item.status = 'retired';
+            item.assignee = '';
+            break;
+          case 'lost':
+            item.status = 'lost';
+            break;
+          default:
+            break;
+        }
+        addHistory(item, action, details);
+      }
+
+      function quickToggle(id, action) {
+        const item = findItem(id);
+        if (!item) return;
+        if (action === 'check-out') {
+          const actor = window.prompt('Check out ' + item.name + ' to whom?', item.assignee || '');
+          if (actor === null) return;
+          applyStatusChange(item, 'check-out', { actor: actor.trim(), location: item.location, note: '' });
+        } else {
+          applyStatusChange(item, 'check-in', { actor: '', location: item.location, note: '' });
+        }
+        saveState();
+        renderAll();
+        if (activeItemId === item.id) renderDetail();
+        toast(item.name + ' is now ' + STATUS_LABELS[item.status].toLowerCase() + '.');
+      }
+
+      function openModal(id) {
+        document.getElementById(id).classList.add('open');
+      }
+
+      function closeModal(id) {
+        document.getElementById(id).classList.remove('open');
+      }
+
+      function openDetail(id) {
+        const item = findItem(id);
+        if (!item) {
+          toast('That asset ID is not in this inventory.');
+          return;
+        }
+        activeItemId = id;
+        renderDetail();
+        openModal('detailModal');
+      }
+
+      function renderDetail() {
+        const item = findItem(activeItemId);
+        if (!item) {
+          closeModal('detailModal');
+          return;
+        }
+
+        document.getElementById('detailTitle').textContent = item.name;
+        document.getElementById('detailSub').innerHTML =
+          `<span class="code">${escapeHtml(item.id)}</span> &middot; ` +
+          `<span class="badge ${escapeHtml(item.status)}">${escapeHtml(STATUS_LABELS[item.status])}</span>`;
+
+        const payload = qrPayload(item);
+        document.getElementById('detailQr').innerHTML = qrImgTag(payload, 8);
+        document.getElementById('detailPayload').value = payload;
+
+        const facts = [
+          ['Category', item.category],
+          ['SKU', item.sku],
+          ['Serial', item.serial],
+          ['Location', item.location],
+          ['Assigned to', item.assignee],
+          ['Quantity', String(item.quantity)],
+          ['Unit cost', formatMoney(item.unitCost)],
+          ['Total value', formatMoney(item.unitCost * item.quantity)],
+          ['Vendor', item.vendor],
+          ['Purchased', item.purchaseDate],
+          ['Service due', item.warrantyDate],
+          ['Notes', item.notes],
+          ['Last update', formatDateTime(item.updatedAt)]
+        ].filter((pair) => safeText(pair[1]).trim() !== '');
+
+        document.getElementById('detailFacts').innerHTML = facts
+          .map((pair) => `<dt>${escapeHtml(pair[0])}</dt><dd>${escapeHtml(pair[1])}</dd>`)
+          .join('');
+
+        const history = document.getElementById('detailHistory');
+        history.innerHTML = item.history.length
+          ? item.history
+              .map((entry) => {
+                const bits = [entry.actor, entry.location, entry.note].filter(Boolean).map(escapeHtml).join(' &middot; ');
+                return `<div class="history-item">
+                    <time>${escapeHtml(formatDateTime(entry.ts))}</time>
+                    <div><strong>${escapeHtml(ACTION_LABELS[entry.action] || entry.action)}</strong>${
+                      bits ? '<div class="item-meta">' + bits + '</div>' : ''
+                    }</div>
+                  </div>`;
+              })
+              .join('')
+          : '<div class="item-meta">No activity logged yet.</div>';
+
+        document.getElementById('actionLocation').value = item.location;
+      }
+
+      function handleApplyAction() {
+        const item = findItem(activeItemId);
+        if (!item) return;
+        const action = document.getElementById('actionSelect').value;
+        const details = {
+          actor: document.getElementById('actionActor').value.trim(),
+          location: document.getElementById('actionLocation').value.trim(),
+          note: document.getElementById('actionNote').value.trim()
+        };
+        applyStatusChange(item, action, details);
+        saveState();
+        renderAll();
+        renderDetail();
+        document.getElementById('actionNote').value = '';
+        toast('Logged: ' + (ACTION_LABELS[action] || action));
+      }
+
+      function openEdit() {
+        const item = findItem(activeItemId);
+        if (!item) return;
+        document.getElementById('eName').value = item.name;
+        document.getElementById('eCategory').value = item.category;
+        document.getElementById('eSku').value = item.sku;
+        document.getElementById('eSerial').value = item.serial;
+        document.getElementById('eLocation').value = item.location;
+        document.getElementById('eAssignee').value = item.assignee;
+        document.getElementById('eQuantity').value = item.quantity;
+        document.getElementById('eCost').value = item.unitCost;
+        document.getElementById('eVendor').value = item.vendor;
+        document.getElementById('ePurchased').value = item.purchaseDate;
+        document.getElementById('eStatus').value = item.status;
+        document.getElementById('eWarranty').value = item.warrantyDate;
+        document.getElementById('eNotes').value = item.notes;
+        openModal('editModal');
+      }
+
+      function handleEditSubmit(event) {
+        event.preventDefault();
+        const item = findItem(activeItemId);
+        if (!item) return;
+        const data = new FormData(event.target);
+        const updated = normalizeItem({
+          id: item.id,
+          createdAt: item.createdAt,
+          history: item.history,
+          name: data.get('name'),
+          category: data.get('category'),
+          sku: data.get('sku'),
+          serial: data.get('serial'),
+          location: data.get('location'),
+          assignee: data.get('assignee'),
+          quantity: data.get('quantity'),
+          unitCost: data.get('unitCost'),
+          vendor: data.get('vendor'),
+          purchaseDate: data.get('purchaseDate'),
+          status: data.get('status'),
+          warrantyDate: data.get('warrantyDate'),
+          notes: data.get('notes')
+        });
+        addHistory(updated, 'edit', { location: updated.location });
+        const index = state.items.findIndex((entry) => entry.id === item.id);
+        state.items[index] = updated;
+        saveState();
+        renderAll();
+        renderDetail();
+        closeModal('editModal');
+        toast('Saved changes to ' + updated.name);
+      }
+
+      function handleDeleteItem() {
+        const item = findItem(activeItemId);
+        if (!item) return;
+        if (!window.confirm('Delete ' + item.name + ' (' + item.id + ')? This cannot be undone.')) return;
+        state.items = state.items.filter((entry) => entry.id !== item.id);
+        activeItemId = '';
+        saveState();
+        renderAll();
+        closeModal('detailModal');
+        toast('Deleted ' + item.name);
+      }
+
+      function downloadBlob(blob, filename) {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }
+
+      function safeFilename(value) {
+        return safeText(value)
+          .trim()
+          .replace(/[^a-z0-9]+/gi, '-')
+          .replace(/^-+|-+$/g, '')
+          .slice(0, 70) || 'asset';
+      }
+
+      function downloadQrPng() {
+        const item = findItem(activeItemId);
+        if (!item) return;
+        if (!qrReady()) {
+          toast('The QR library did not load, so a PNG cannot be built.');
+          return;
+        }
+
+        const qr = qrcode(0, 'M');
+        qr.addData(qrPayload(item));
+        qr.make();
+
+        const quietZone = 4;
+        const moduleCount = qr.getModuleCount();
+        const totalModules = moduleCount + quietZone * 2;
+        const scale = Math.max(1, Math.floor(1200 / totalModules));
+        const size = totalModules * scale;
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+
+        canvas.width = size;
+        canvas.height = size;
+        context.imageSmoothingEnabled = false;
+        context.fillStyle = '#ffffff';
+        context.fillRect(0, 0, size, size);
+        context.fillStyle = '#000000';
+
+        for (let row = 0; row < moduleCount; row += 1) {
+          for (let column = 0; column < moduleCount; column += 1) {
+            if (qr.isDark(row, column)) {
+              context.fillRect((column + quietZone) * scale, (row + quietZone) * scale, scale, scale);
+            }
+          }
+        }
+
+        canvas.toBlob((blob) => {
+          if (!blob) {
+            toast('Could not build the PNG in this browser.');
+            return;
+          }
+          downloadBlob(blob, safeFilename(item.id + '-' + item.name) + '.png');
+          toast('QR PNG downloaded.');
+        }, 'image/png');
+      }
+
+      function buildLabelSheet(items, title) {
+        document.getElementById('labelSheetTitle').textContent = title;
+        document.getElementById('labelGrid').innerHTML = items
+          .map((item) => {
+            const org = safeText(state.settings.org).trim();
+            return `<div class="label">
+                ${qrImgTag(qrPayload(item), 4)}
+                <div class="label-text">
+                  <strong>${escapeHtml(item.name)}</strong>
+                  ${escapeHtml(item.id)}<br />
+                  ${item.sku ? 'SKU ' + escapeHtml(item.sku) + '<br />' : ''}
+                  ${item.location ? escapeHtml(item.location) + '<br />' : ''}
+                  ${org ? escapeHtml(org) : ''}
+                </div>
+              </div>`;
+          })
+          .join('');
+      }
+
+      function printLabels(items, title) {
+        if (!items.length) {
+          toast('There are no items to print.');
+          return;
+        }
+        buildLabelSheet(items, title);
+        window.print();
+      }
+
+      function exportJson() {
+        const payload = JSON.stringify({ exportedAt: new Date().toISOString(), settings: state.settings, items: state.items }, null, 2);
+        downloadBlob(new Blob([payload], { type: 'application/json' }), 'qr-asset-tracker-' + new Date().toISOString().slice(0, 10) + '.json');
+        toast('Exported ' + state.items.length + ' items.');
+      }
+
+      function csvCell(value) {
+        return '"' + safeText(value).replace(/"/g, '""') + '"';
+      }
+
+      function exportCsv() {
+        const headers = ['Asset ID', 'Name', 'Category', 'Status', 'SKU', 'Serial', 'Location', 'Assigned to', 'Quantity', 'Unit cost', 'Total value', 'Vendor', 'Purchased', 'Service due', 'Notes', 'QR payload'];
+        const rows = state.items.map((item) => [
+          item.id,
+          item.name,
+          item.category,
+          STATUS_LABELS[item.status] || item.status,
+          item.sku,
+          item.serial,
+          item.location,
+          item.assignee,
+          item.quantity,
+          item.unitCost.toFixed(2),
+          (item.unitCost * item.quantity).toFixed(2),
+          item.vendor,
+          item.purchaseDate,
+          item.warrantyDate,
+          item.notes,
+          qrPayload(item)
+        ]);
+        const csv = [headers, ...rows].map((row) => row.map(csvCell).join(',')).join('\r\n');
+        downloadBlob(new Blob([csv], { type: 'text/csv' }), 'qr-asset-tracker-' + new Date().toISOString().slice(0, 10) + '.csv');
+        toast('Exported CSV.');
+      }
+
+      function handleImportFile(event) {
+        const file = event.target.files && event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            const parsed = JSON.parse(String(reader.result));
+            const incoming = Array.isArray(parsed) ? parsed : parsed.items;
+            if (!Array.isArray(incoming)) throw new Error('No items array found');
+
+            const byId = new Map(state.items.map((item) => [item.id, item]));
+            let added = 0;
+            let replaced = 0;
+            incoming.map(normalizeItem).forEach((item) => {
+              if (byId.has(item.id)) {
+                replaced += 1;
+              } else {
+                added += 1;
+              }
+              byId.set(item.id, item);
+            });
+            state.items = Array.from(byId.values());
+            saveState();
+            renderAll();
+            toast('Imported ' + added + ' new and updated ' + replaced + ' existing items.');
+          } catch (error) {
+            console.error(error);
+            toast('That file could not be read as a tracker export.');
+          }
+          event.target.value = '';
+        };
+        reader.readAsText(file);
+      }
+
+      function extractAssetId(text) {
+        const value = safeText(text).trim();
+        if (!value) return '';
+        const hashMatch = value.match(/item=([^&\s#]+)/i);
+        if (hashMatch) return decodeURIComponent(hashMatch[1]).toUpperCase();
+        const idMatch = value.match(/AST-[0-9A-F]{6}/i);
+        if (idMatch) return idMatch[0].toUpperCase();
+        return value.toUpperCase();
+      }
+
+      function resolveScan(text) {
+        const candidate = extractAssetId(text);
+        const direct = findItem(candidate);
+        if (direct) return direct;
+        const lowered = safeText(text).trim().toLowerCase();
+        return state.items.find((item) =>
+          item.sku.toLowerCase() === lowered ||
+          item.serial.toLowerCase() === lowered ||
+          item.name.toLowerCase() === lowered
+        ) || null;
+      }
+
+      function setScanStatus(message) {
+        document.getElementById('scanStatus').textContent = message;
+      }
+
+      async function listCameras() {
+        try {
+          const devices = await navigator.mediaDevices.enumerateDevices();
+          cameraDevices = devices.filter((device) => device.kind === 'videoinput');
+        } catch (error) {
+          cameraDevices = [];
+        }
+        document.getElementById('switchCameraBtn').disabled = cameraDevices.length < 2;
+      }
+
+      async function startScanner() {
+        openModal('scanModal');
+        document.getElementById('manualCode').value = '';
+
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          setScanStatus('This browser cannot open a camera. Type the asset ID below instead.');
+          return;
+        }
+
+        setScanStatus('Requesting camera access...');
+        try {
+          const constraints = cameraDevices.length && cameraDevices[cameraIndex]
+            ? { video: { deviceId: { exact: cameraDevices[cameraIndex].deviceId } } }
+            : { video: { facingMode: { ideal: 'environment' } } };
+          scanStream = await navigator.mediaDevices.getUserMedia(constraints);
+        } catch (error) {
+          console.error(error);
+          setScanStatus('Camera unavailable (' + safeText(error.name || error.message) + '). Type the asset ID below instead.');
+          return;
+        }
+
+        const video = document.getElementById('scanVideo');
+        video.srcObject = scanStream;
+        await video.play().catch(() => {});
+        await listCameras();
+
+        if (!barcodeDetector && 'BarcodeDetector' in window) {
+          try {
+            const formats = await window.BarcodeDetector.getSupportedFormats();
+            if (formats.includes('qr_code')) {
+              barcodeDetector = new window.BarcodeDetector({ formats: ['qr_code'] });
+            }
+          } catch (error) {
+            barcodeDetector = null;
+          }
+        }
+
+        if (!barcodeDetector && typeof jsQR !== 'function') {
+          setScanStatus('No QR decoder is available in this browser. Type the asset ID below instead.');
+          return;
+        }
+
+        setScanStatus('Scanning...');
+        scanLoop();
+      }
+
+      function scanLoop() {
+        const video = document.getElementById('scanVideo');
+        if (!scanStream) return;
+
+        const tick = async () => {
+          if (!scanStream) return;
+          if (video.readyState === video.HAVE_ENOUGH_DATA) {
+            const found = await readFrame(video);
+            if (found) {
+              handleScanResult(found);
+              return;
+            }
+          }
+          scanLoopId = window.requestAnimationFrame(tick);
+        };
+        scanLoopId = window.requestAnimationFrame(tick);
+      }
+
+      async function readFrame(video) {
+        if (barcodeDetector) {
+          try {
+            const codes = await barcodeDetector.detect(video);
+            if (codes.length) return codes[0].rawValue;
+          } catch (error) {
+            barcodeDetector = null;
+          }
+        }
+
+        if (typeof jsQR !== 'function') return '';
+
+        if (!scanCanvas) scanCanvas = document.createElement('canvas');
+        const width = video.videoWidth;
+        const height = video.videoHeight;
+        if (!width || !height) return '';
+
+        scanCanvas.width = width;
+        scanCanvas.height = height;
+        const context = scanCanvas.getContext('2d', { willReadFrequently: true });
+        context.drawImage(video, 0, 0, width, height);
+        const imageData = context.getImageData(0, 0, width, height);
+        const result = jsQR(imageData.data, width, height, { inversionAttempts: 'dontInvert' });
+        return result ? result.data : '';
+      }
+
+      function handleScanResult(text) {
+        const item = resolveScan(text);
+        if (!item) {
+          setScanStatus('Scanned "' + safeText(text).slice(0, 60) + '" but no item matches. Still scanning...');
+          window.setTimeout(() => {
+            if (scanStream) scanLoop();
+          }, 1400);
+          return;
+        }
+        stopScanner();
+        openDetail(item.id);
+        toast('Scanned ' + item.name);
+      }
+
+      function stopScanner() {
+        if (scanLoopId) {
+          window.cancelAnimationFrame(scanLoopId);
+          scanLoopId = 0;
+        }
+        if (scanStream) {
+          scanStream.getTracks().forEach((track) => track.stop());
+          scanStream = null;
+        }
+        const video = document.getElementById('scanVideo');
+        video.srcObject = null;
+        closeModal('scanModal');
+      }
+
+      async function switchCamera() {
+        if (cameraDevices.length < 2) return;
+        cameraIndex = (cameraIndex + 1) % cameraDevices.length;
+        stopScanner();
+        await startScanner();
+      }
+
+      function manualLookup() {
+        const value = document.getElementById('manualCode').value;
+        const item = resolveScan(value);
+        if (!item) {
+          setScanStatus('No item matches "' + safeText(value).slice(0, 60) + '".');
+          return;
+        }
+        stopScanner();
+        openDetail(item.id);
+      }
+
+      function renderPasscodeState() {
+        const label = document.getElementById('passcodeState');
+        const removeBtn = document.getElementById('removePasscodeBtn');
+        const setBtn = document.getElementById('setPasscodeBtn');
+        const lockNowBtn = document.getElementById('lockNowBtn');
+
+        if (encryptionOn) {
+          label.textContent = 'Inventory data is encrypted in this browser with AES-GCM. The passcode is never stored.';
+          setBtn.textContent = 'Change passcode';
+          removeBtn.hidden = false;
+          lockNowBtn.hidden = false;
+        } else {
+          label.textContent = cryptoAvailable()
+            ? 'Inventory data is stored unencrypted in this browser.'
+            : 'Passcode protection needs a secure page. Serve this file over https:// or http://localhost.';
+          setBtn.textContent = 'Set passcode';
+          setBtn.disabled = !cryptoAvailable();
+          removeBtn.hidden = true;
+          lockNowBtn.hidden = true;
+        }
+      }
+
+      function openSettings() {
+        document.getElementById('baseUrlInput').value = state.settings.baseUrl;
+        document.getElementById('orgInput').value = state.settings.org;
+        document.getElementById('autoLockSelect').value = String(state.settings.autoLockMinutes);
+        renderPasscodeState();
+        openModal('settingsModal');
+      }
+
+      function saveSettings() {
+        state.settings.baseUrl = document.getElementById('baseUrlInput').value.trim();
+        state.settings.org = document.getElementById('orgInput').value.trim();
+        state.settings.autoLockMinutes = Number(document.getElementById('autoLockSelect').value) || 0;
+        resetIdleTimer();
+        saveState();
+        renderAll();
+        if (activeItemId) renderDetail();
+        closeModal('settingsModal');
+        toast('Settings saved. QR codes were regenerated.');
+      }
+
+      function clearAllData() {
+        if (!window.confirm('Erase every item and setting stored in this browser?')) return;
+        state = { items: [], settings: { baseUrl: '', org: '', autoLockMinutes: 15 } };
+        activeItemId = '';
+        encryptionOn = false;
+        vaultKey = null;
+        vaultSalt = null;
+        pendingPayload = null;
+        renderPasscodeState();
+        localStorage.removeItem(STORAGE_KEY);
+        renderAll();
+        closeModal('settingsModal');
+        toast('All local data erased.');
+      }
+
+      function seedSampleData() {
+        if (state.items.length && !window.confirm('Add sample items to the current inventory?')) return;
+        const samples = [
+          { name: 'DeWalt 20V impact driver', category: 'Tool', sku: 'DCF887B', serial: 'SN-449201', location: 'Shop A - Bin 12', unitCost: 179.0, vendor: 'Acme Supply', status: 'available' },
+          { name: 'Hilti rotary hammer', category: 'Tool', sku: 'TE-30', serial: 'SN-771034', location: 'Truck 4', assignee: 'R. Alvarez', unitCost: 899.0, vendor: 'Hilti', status: 'checked-out' },
+          { name: 'Fluke 87V multimeter', category: 'Equipment', sku: 'FLUKE-87V', serial: 'SN-120988', location: 'Calibration bench', unitCost: 449.0, vendor: 'Grainger', status: 'maintenance', notes: 'Annual calibration due' },
+          { name: 'Pallet jack, 5500 lb', category: 'Equipment', sku: 'PJ-5500', serial: 'SN-330017', location: 'Warehouse dock', unitCost: 389.0, vendor: 'Uline', status: 'available' },
+          { name: 'Nitrile gloves, box of 100', category: 'Consumable', sku: 'GLV-NIT-L', location: 'Stockroom shelf 3', quantity: 24, unitCost: 12.5, vendor: 'Uline', status: 'available' },
+          { name: 'Bluetooth speaker (retail)', category: 'Retail', sku: 'BTS-220', location: 'Front display', quantity: 8, unitCost: 59.99, vendor: 'Northline Distributors', status: 'available' }
+        ];
+
+        samples.forEach((sample) => {
+          const item = normalizeItem(Object.assign({ id: newAssetId(), quantity: 1, history: [] }, sample));
+          addHistory(item, 'created', { location: item.location, note: 'Sample data' });
+          if (item.status === 'checked-out') {
+            addHistory(item, 'check-out', { actor: item.assignee, location: item.location });
+          }
+          state.items.push(item);
+        });
+
+        saveState();
+        renderAll();
+        toast('Loaded ' + samples.length + ' sample items.');
+      }
+
+      function handleDeepLink() {
+        if (encryptionOn && !vaultKey) return;
+        const match = window.location.hash.match(/item=([^&]+)/i);
+        if (!match) return;
+        const id = decodeURIComponent(match[1]).toUpperCase();
+        const item = findItem(id);
+        if (item) {
+          openDetail(item.id);
+        } else {
+          toast('Asset ' + id + ' is not in this browser’s inventory.');
+        }
+      }
+
+      function showLock(mode) {
+        lockMode = mode;
+        const overlay = document.getElementById('lockOverlay');
+        const title = document.getElementById('lockTitle');
+        const text = document.getElementById('lockText');
+        const submit = document.getElementById('lockSubmit');
+        const skip = document.getElementById('lockSkip');
+
+        document.getElementById('lockForm').reset();
+        document.getElementById('lockMessage').textContent = '';
+        document.getElementById('lockMessage').classList.remove('info');
+        document.getElementById('lockConfirmField').hidden = mode === 'unlock';
+        submit.disabled = false;
+
+        if (mode === 'unlock') {
+          title.textContent = 'Unlock inventory';
+          text.textContent = 'This inventory is encrypted. Enter its passcode to continue.';
+          submit.textContent = 'Unlock';
+          skip.hidden = true;
+          if (!cryptoAvailable()) {
+            setLockMessage('This page must be served over https:// or http://localhost to decrypt data.', true);
+            submit.disabled = true;
+          }
+        } else {
+          title.textContent = encryptionOn ? 'Change passcode' : 'Set a passcode';
+          text.textContent = 'The passcode encrypts this inventory in the browser. It is never stored, so it cannot be recovered.';
+          submit.textContent = encryptionOn ? 'Change passcode' : 'Encrypt inventory';
+          skip.hidden = encryptionOn;
+        }
+
+        overlay.classList.remove('hidden');
+        window.setTimeout(() => document.getElementById('lockPass').focus(), 50);
+      }
+
+      function hideLock() {
+        document.getElementById('lockOverlay').classList.add('hidden');
+        document.getElementById('lockForm').reset();
+      }
+
+      function setLockMessage(message, isInfo) {
+        const node = document.getElementById('lockMessage');
+        node.textContent = message;
+        node.classList.toggle('info', !!isInfo);
+      }
+
+      async function handleLockSubmit(event) {
+        event.preventDefault();
+        const submit = document.getElementById('lockSubmit');
+        const passcode = document.getElementById('lockPass').value;
+
+        if (!passcode) {
+          setLockMessage('Enter a passcode.');
+          return;
+        }
+
+        if (!cryptoAvailable()) {
+          setLockMessage('This page must be served over https:// or http://localhost to use a passcode.');
+          return;
+        }
+
+        const originalLabel = submit.textContent;
+        submit.disabled = true;
+        submit.textContent = 'Working...';
+        setLockMessage('', true);
+
+        try {
+          if (lockMode === 'unlock') {
+            const salt = base64ToBuffer(pendingPayload.salt);
+            const key = await deriveKey(passcode, salt);
+            let plain = '';
+            try {
+              plain = await decryptPayload(pendingPayload, key);
+            } catch (error) {
+              setLockMessage('That passcode did not work.');
+              return;
+            }
+            applyPayloadObject(JSON.parse(plain));
+            vaultKey = key;
+            vaultSalt = salt;
+            encryptionOn = true;
+            pendingPayload = null;
+            hideLock();
+            renderAll();
+            renderPasscodeState();
+            resetIdleTimer();
+            handleDeepLink();
+            toast('Inventory unlocked.');
+            return;
+          }
+
+          const confirmValue = document.getElementById('lockConfirm').value;
+          if (passcode.length < 4) {
+            setLockMessage('Use at least 4 characters.');
+            return;
+          }
+          if (passcode !== confirmValue) {
+            setLockMessage('The two passcodes do not match.');
+            return;
+          }
+
+          vaultSalt = crypto.getRandomValues(new Uint8Array(16));
+          vaultKey = await deriveKey(passcode, vaultSalt);
+          encryptionOn = true;
+          await saveState();
+          hideLock();
+          renderPasscodeState();
+          resetIdleTimer();
+          toast('Inventory encrypted. Keep the passcode safe: it cannot be recovered.');
+        } finally {
+          submit.disabled = false;
+          submit.textContent = originalLabel;
+        }
+      }
+
+      function skipPasscode() {
+        hideLock();
+        toast('Continuing without a passcode. You can set one later in Settings.');
+      }
+
+      function lockNow() {
+        if (!encryptionOn) return;
+        pendingPayload = readRawPayload();
+        if (!pendingPayload || !pendingPayload.encrypted) {
+          toast('Nothing is encrypted yet.');
+          return;
+        }
+        vaultKey = null;
+        activeItemId = '';
+        state.items = [];
+        document.querySelectorAll('.modal-backdrop.open').forEach((node) => node.classList.remove('open'));
+        window.clearTimeout(idleTimer);
+        renderAll();
+        showLock('unlock');
+      }
+
+      function resetIdleTimer() {
+        window.clearTimeout(idleTimer);
+        if (!encryptionOn || !vaultKey) return;
+        const minutes = Number(state.settings.autoLockMinutes) || 0;
+        if (minutes <= 0) return;
+        idleTimer = window.setTimeout(lockNow, minutes * 60 * 1000);
+      }
+
+      function removePasscode() {
+        if (!encryptionOn) return;
+        if (!window.confirm('Remove the passcode and store this inventory unencrypted?')) return;
+        encryptionOn = false;
+        vaultKey = null;
+        vaultSalt = null;
+        window.clearTimeout(idleTimer);
+        saveState();
+        renderPasscodeState();
+        toast('Passcode removed. Data is now stored unencrypted.');
+      }
+
+      function bindEvents() {
+        document.getElementById('itemForm').addEventListener('submit', handleAddItem);
+        document.getElementById('editForm').addEventListener('submit', handleEditSubmit);
+        document.getElementById('seedBtn').addEventListener('click', seedSampleData);
+
+        ['searchInput', 'categoryFilter', 'statusFilter', 'locationFilter'].forEach((id) => {
+          const node = document.getElementById(id);
+          node.addEventListener('input', renderTable);
+          node.addEventListener('change', renderTable);
+        });
+
+        document.getElementById('itemTableBody').addEventListener('click', (event) => {
+          const button = event.target.closest('button');
+          if (!button) return;
+          const row = button.closest('tr');
+          if (!row) return;
+          const id = row.dataset.id;
+          if (button.dataset.action === 'detail') {
+            openDetail(id);
+          } else if (button.dataset.action === 'toggle') {
+            quickToggle(id, button.dataset.toggle);
+          }
+        });
+
+        document.getElementById('detailClose').addEventListener('click', () => closeModal('detailModal'));
+        document.getElementById('applyActionBtn').addEventListener('click', handleApplyAction);
+        document.getElementById('editItemBtn').addEventListener('click', openEdit);
+        document.getElementById('deleteItemBtn').addEventListener('click', handleDeleteItem);
+        document.getElementById('downloadQrBtn').addEventListener('click', downloadQrPng);
+        document.getElementById('printOneBtn').addEventListener('click', () => {
+          const item = findItem(activeItemId);
+          if (item) printLabels([item], item.name + ' (' + item.id + ')');
+        });
+
+        document.getElementById('editClose').addEventListener('click', () => closeModal('editModal'));
+        document.getElementById('editCancel').addEventListener('click', () => closeModal('editModal'));
+
+        document.getElementById('scanBtn').addEventListener('click', startScanner);
+        document.getElementById('scanClose').addEventListener('click', stopScanner);
+        document.getElementById('manualLookupBtn').addEventListener('click', manualLookup);
+        document.getElementById('switchCameraBtn').addEventListener('click', switchCamera);
+        document.getElementById('manualCode').addEventListener('keydown', (event) => {
+          if (event.key === 'Enter') {
+            event.preventDefault();
+            manualLookup();
+          }
+        });
+
+        document.getElementById('printLabelsBtn').addEventListener('click', () => {
+          const items = getFilteredItems();
+          printLabels(items, 'Asset labels (' + items.length + ')');
+        });
+        document.getElementById('exportJsonBtn').addEventListener('click', exportJson);
+        document.getElementById('exportCsvBtn').addEventListener('click', exportCsv);
+        document.getElementById('importBtn').addEventListener('click', () => document.getElementById('importFile').click());
+        document.getElementById('importFile').addEventListener('change', handleImportFile);
+
+        document.getElementById('settingsBtn').addEventListener('click', openSettings);
+        document.getElementById('settingsClose').addEventListener('click', () => closeModal('settingsModal'));
+        document.getElementById('saveSettingsBtn').addEventListener('click', saveSettings);
+        document.getElementById('clearDataBtn').addEventListener('click', clearAllData);
+
+        document.getElementById('lockForm').addEventListener('submit', handleLockSubmit);
+        document.getElementById('lockSkip').addEventListener('click', skipPasscode);
+        document.getElementById('lockNowBtn').addEventListener('click', lockNow);
+        document.getElementById('setPasscodeBtn').addEventListener('click', () => {
+          closeModal('settingsModal');
+          showLock('create');
+        });
+        document.getElementById('removePasscodeBtn').addEventListener('click', removePasscode);
+        document.getElementById('autoLockSelect').addEventListener('change', (event) => {
+          state.settings.autoLockMinutes = Number(event.target.value) || 0;
+          resetIdleTimer();
+          saveState();
+        });
+
+        ['pointerdown', 'keydown'].forEach((eventName) => {
+          document.addEventListener(eventName, () => {
+            if (encryptionOn && vaultKey) resetIdleTimer();
+          });
+        });
+
+        document.querySelectorAll('.modal-backdrop').forEach((backdrop) => {
+          backdrop.addEventListener('click', (event) => {
+            if (event.target !== backdrop) return;
+            if (backdrop.id === 'scanModal') {
+              stopScanner();
+            } else {
+              backdrop.classList.remove('open');
+            }
+          });
+        });
+
+        document.addEventListener('keydown', (event) => {
+          if (event.key !== 'Escape') return;
+          if (!document.getElementById('lockOverlay').classList.contains('hidden')) return;
+          if (document.getElementById('scanModal').classList.contains('open')) {
+            stopScanner();
+            return;
+          }
+          document.querySelectorAll('.modal-backdrop.open').forEach((node) => node.classList.remove('open'));
+        });
+
+        window.addEventListener('hashchange', handleDeepLink);
+      }
+
+      function ensureQrLibrary() {
+        if (qrReady()) return;
+        const fallback = document.createElement('script');
+        fallback.src = 'https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js';
+        fallback.onload = () => {
+          renderAll();
+          if (activeItemId) renderDetail();
+        };
+        fallback.onerror = () => toast('QR codes are unavailable: assets/vendor/qrcode.js did not load.');
+        document.head.appendChild(fallback);
+      }
+
+      function boot() {
+        bindEvents();
+
+        const stored = readRawPayload();
+        if (stored && stored.encrypted) {
+          pendingPayload = stored;
+          encryptionOn = true;
+          renderAll();
+          ensureQrLibrary();
+          showLock('unlock');
+          return;
+        }
+
+        loadPlainState();
+        renderAll();
+        renderPasscodeState();
+        ensureQrLibrary();
+        handleDeepLink();
+      }
+
+      boot();
+    </script>
+  </body>
+</html>
