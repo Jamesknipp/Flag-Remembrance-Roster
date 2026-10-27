@@ -34,7 +34,7 @@ Tag any physical item with a QR code and track where it is, who has it, and what
 - Filter and search by name, asset ID, SKU, serial, location, person, category, and status
 - Live totals for available, checked out, in maintenance, lost/retired, and inventory value
 - Print a sheet of QR labels for the current filter, or a single label, and download any QR code as a high-resolution PNG
-- Export to JSON or CSV, and import JSON back (matching asset IDs are updated, new ones are added)
+- Export an items CSV, an activity CSV, a Quicken QIF, or a full JSON backup, and import JSON back (matching asset IDs are updated, new ones are added)
 - Point QR codes at a hosted copy of the app so a phone camera opens the item page directly
 - Optional passcode protection that encrypts the whole inventory in the browser, with idle auto-lock
 - Runs entirely client-side with no backend, and works offline - the QR libraries are vendored in `assets/vendor/`
@@ -62,13 +62,38 @@ Items live in this browser's `localStorage` under `qr-asset-tracker-v1`, and nev
 
 Data is per browser and per device. Two phones scanning the same tag each see their own inventory unless you move a JSON export between them; a shared, always-current inventory needs a real backend.
 
+### Export formats
+
+**Export / Import** in the toolbar offers four files:
+
+| Format | Shape | Use it for |
+| --- | --- | --- |
+| Items CSV | One row per item | Stock counts, valuation, reorder lists |
+| Activity CSV | One row per logged action, oldest first | Who had what, and when |
+| Quicken QIF | Purchases as asset-account transactions | Tracking what the gear is worth |
+| JSON backup | Everything, including history and settings | Backups, moving to another device |
+
 ### Using the data in Excel or Power BI
 
 **Excel.** Use **Export CSV** and open it directly. For a report you refresh regularly, put the exported file in a fixed folder (OneDrive or a network share) and load it with *Data > Get Data > From Text/CSV* rather than opening it by hand - Power Query remembers the shaping, so a re-export plus **Refresh All** rebuilds the report.
 
 **Power BI.** Point *Get Data > Text/CSV* (or *SharePoint folder*, if the exports land in SharePoint or OneDrive) at the same file. A file in SharePoint or OneDrive for Business can be refreshed in the Power BI service on a schedule with no on-premises gateway; a file on a local disk needs one.
 
+For a report worth building, load **both** CSVs and relate them on `Asset ID`: the items CSV is the dimension table (what the item is, what it cost, where it lives) and the activity CSV is the fact table (one row per check-out, check-in, or move). That is what lets you ask how long a tool was out, who has had it, and which items never move.
+
 Both routes are snapshot-based: the report is only as current as the last export. For live dashboards or several people scanning at once, the data has to live somewhere shared rather than in a browser - see the notes below.
+
+### Sending valuation to Quicken
+
+Quicken has no item-level inventory - its Home Inventory Manager was retired and went unsupported in January 2026 - but it can hold the total value of your gear as an asset account that counts toward net worth. Quicken Classic imports QIF for asset accounts and does not import CSV directly, so the tracker writes QIF:
+
+1. In Quicken, create an asset account (for example *Tools & Equipment*).
+2. In the tracker, open **Export / Import**, type that same account name into **QIF asset account name**, and export.
+3. In Quicken for Windows, choose *File > File Import > QIF File* and pick the asset account as the destination.
+
+One transaction is written per item that has a unit cost, dated by its purchase date (falling back to the date it was added), with the vendor as payee and the item name, asset ID, quantity, and serial in the memo. Retired and lost items are left out unless you tick **Include retired and lost items**. The amount is unit cost times quantity.
+
+Re-exporting writes the same purchases again, so import once and then export only after adding items, or Quicken will double up the transactions.
 
 ## Run locally
 

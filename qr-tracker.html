@@ -385,6 +385,18 @@
 
       .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
+      .export-row {
+        display: flex;
+        gap: 14px;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 0;
+        border-bottom: 1px solid rgba(110, 190, 200, 0.14);
+      }
+
+      .export-row:last-of-type { border-bottom: none; }
+      .export-row .item-meta { margin-top: 4px; max-width: 46ch; }
+
       .lock-overlay {
         position: fixed;
         inset: 0;
@@ -493,9 +505,7 @@
           <div class="top-actions">
             <button id="scanBtn" class="primary" type="button">Scan QR</button>
             <button id="printLabelsBtn" type="button">Print labels</button>
-            <button id="exportJsonBtn" type="button">Export JSON</button>
-            <button id="exportCsvBtn" type="button">Export CSV</button>
-            <button id="importBtn" type="button">Import JSON</button>
+            <button id="dataBtn" type="button">Export / Import</button>
             <button id="settingsBtn" class="ghost" type="button">Settings</button>
             <button id="lockNowBtn" class="ghost" type="button" hidden>Lock</button>
             <input id="importFile" type="file" accept="application/json,.json" hidden />
@@ -817,6 +827,65 @@
         <div class="top-actions">
           <button id="manualLookupBtn" class="primary" type="button">Look up</button>
           <button id="switchCameraBtn" type="button" disabled>Switch camera</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="dataModal" class="modal-backdrop" role="dialog" aria-modal="true">
+      <div class="modal" style="width: min(620px, 100%);">
+        <div class="modal-head">
+          <div>
+            <h3>Export and import</h3>
+            <div class="item-meta">Exports are written in plain text so other tools can read them.</div>
+          </div>
+          <button id="dataClose" class="ghost small" type="button">Close</button>
+        </div>
+
+        <div class="export-row">
+          <div>
+            <strong>Items CSV</strong>
+            <div class="item-meta">One row per item, with current status, location, and value. Opens in Excel; use as the item table in Power BI.</div>
+          </div>
+          <button id="exportCsvBtn" type="button">Export</button>
+        </div>
+
+        <div class="export-row">
+          <div>
+            <strong>Activity CSV</strong>
+            <div class="item-meta">One row per logged action, with timestamp, person, and location. Join it to the items CSV on Asset ID for check-out reporting.</div>
+          </div>
+          <button id="exportActivityBtn" type="button">Export</button>
+        </div>
+
+        <div class="export-row">
+          <div>
+            <strong>Quicken QIF</strong>
+            <div class="item-meta">Purchases as transactions in an asset account, for tracking what your gear is worth. Quicken imports QIF for asset accounts; it does not take CSV.</div>
+          </div>
+          <button id="exportQifBtn" type="button">Export</button>
+        </div>
+        <div class="grid-2" style="margin-top: 4px;">
+          <div class="field">
+            <label for="qifAccount">QIF asset account name</label>
+            <input id="qifAccount" placeholder="Tools &amp; Equipment" />
+          </div>
+          <div class="field" style="display:flex;align-items:flex-end;">
+            <label style="display:flex;gap:8px;align-items:center;text-transform:none;letter-spacing:0;font-size:0.85rem;color:var(--text);">
+              <input id="qifIncludeInactive" type="checkbox" style="width:auto;" />
+              Include retired and lost items
+            </label>
+          </div>
+        </div>
+
+        <div class="export-row">
+          <div>
+            <strong>JSON backup</strong>
+            <div class="item-meta">Everything, including per-item history and settings. Use this to move an inventory to another browser or device.</div>
+          </div>
+          <div class="row-actions">
+            <button id="exportJsonBtn" type="button">Export</button>
+            <button id="importBtn" type="button">Import</button>
+          </div>
         </div>
       </div>
     </div>
@@ -1578,7 +1647,7 @@
 
       function exportJson() {
         const payload = JSON.stringify({ exportedAt: new Date().toISOString(), settings: state.settings, items: state.items }, null, 2);
-        downloadBlob(new Blob([payload], { type: 'application/json' }), 'qr-asset-tracker-' + new Date().toISOString().slice(0, 10) + '.json');
+        downloadBlob(new Blob([payload], { type: 'application/json' }), 'qr-asset-tracker-' + todayStamp() + '.json');
         toast('Exported ' + state.items.length + ' items.');
       }
 
@@ -1607,8 +1676,93 @@
           qrPayload(item)
         ]);
         const csv = [headers, ...rows].map((row) => row.map(csvCell).join(',')).join('\r\n');
-        downloadBlob(new Blob([csv], { type: 'text/csv' }), 'qr-asset-tracker-' + new Date().toISOString().slice(0, 10) + '.csv');
-        toast('Exported CSV.');
+        downloadBlob(new Blob([csv], { type: 'text/csv' }), 'qr-asset-items-' + todayStamp() + '.csv');
+        toast('Exported ' + rows.length + ' items.');
+      }
+
+      function todayStamp() {
+        return new Date().toISOString().slice(0, 10);
+      }
+
+      function exportActivityCsv() {
+        const headers = ['Asset ID', 'Item name', 'Category', 'Timestamp', 'Date', 'Action', 'Person', 'Location', 'Note'];
+        const rows = [];
+
+        state.items.forEach((item) => {
+          item.history.forEach((entry) => {
+            rows.push([
+              item.id,
+              item.name,
+              item.category,
+              entry.ts,
+              safeText(entry.ts).slice(0, 10),
+              ACTION_LABELS[entry.action] || entry.action,
+              entry.actor,
+              entry.location,
+              entry.note
+            ]);
+          });
+        });
+
+        if (!rows.length) {
+          toast('There is no logged activity to export yet.');
+          return;
+        }
+
+        rows.sort((a, b) => safeText(a[3]).localeCompare(safeText(b[3])));
+        const csv = [headers, ...rows].map((row) => row.map(csvCell).join(',')).join('\r\n');
+        downloadBlob(new Blob([csv], { type: 'text/csv' }), 'qr-asset-activity-' + todayStamp() + '.csv');
+        toast('Exported ' + rows.length + ' activity rows.');
+      }
+
+      function qifDate(value) {
+        const date = new Date(safeText(value));
+        if (Number.isNaN(date.getTime())) return '';
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return month + '/' + day + '/' + date.getFullYear();
+      }
+
+      function qifLine(value) {
+        return safeText(value).replace(/[\r\n]+/g, ' ').trim();
+      }
+
+      function exportQif() {
+        const accountName = qifLine(document.getElementById('qifAccount').value) || 'Tools & Equipment';
+        const includeInactive = document.getElementById('qifIncludeInactive').checked;
+
+        const items = state.items.filter((item) => {
+          if (!includeInactive && (item.status === 'retired' || item.status === 'lost')) return false;
+          return item.unitCost > 0;
+        });
+
+        if (!items.length) {
+          toast('No items have a unit cost to export.');
+          return;
+        }
+
+        const lines = ['!Account', 'N' + accountName, 'TOth A', '^', '!Type:Oth A'];
+        let undated = 0;
+
+        items.forEach((item) => {
+          const date = qifDate(item.purchaseDate) || qifDate(item.createdAt);
+          if (!item.purchaseDate) undated += 1;
+          const memo = qifLine(item.name) + ' (' + item.id + ')' +
+            (item.quantity > 1 ? ' x' + item.quantity : '') +
+            (item.serial ? ' SN ' + qifLine(item.serial) : '');
+
+          lines.push('D' + date);
+          lines.push('T' + (item.unitCost * item.quantity).toFixed(2));
+          if (item.vendor) lines.push('P' + qifLine(item.vendor));
+          lines.push('M' + memo);
+          lines.push('^');
+        });
+
+        downloadBlob(new Blob([lines.join('\r\n') + '\r\n'], { type: 'application/qif' }), 'qr-asset-' + safeFilename(accountName) + '-' + todayStamp() + '.qif');
+        toast(
+          'Exported ' + items.length + ' purchases to QIF' +
+          (undated ? ' (' + undated + ' had no purchase date, so the date added was used).' : '.')
+        );
       }
 
       function handleImportFile(event) {
@@ -2119,8 +2273,12 @@
           const items = getFilteredItems();
           printLabels(items, 'Asset labels (' + items.length + ')');
         });
+        document.getElementById('dataBtn').addEventListener('click', () => openModal('dataModal'));
+        document.getElementById('dataClose').addEventListener('click', () => closeModal('dataModal'));
         document.getElementById('exportJsonBtn').addEventListener('click', exportJson);
         document.getElementById('exportCsvBtn').addEventListener('click', exportCsv);
+        document.getElementById('exportActivityBtn').addEventListener('click', exportActivityCsv);
+        document.getElementById('exportQifBtn').addEventListener('click', exportQif);
         document.getElementById('importBtn').addEventListener('click', () => document.getElementById('importFile').click());
         document.getElementById('importFile').addEventListener('change', handleImportFile);
 
