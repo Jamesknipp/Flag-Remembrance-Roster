@@ -12,8 +12,8 @@ A fully local roster app for tracking aviators, their unit assignments, service 
 ### Features
 
 - Add aviators with name, unit, component, status, notes, and dedication URL
-- Save roster data locally in the browser with a passcode gate
-- Encrypt roster data in localStorage using the browser Web Crypto API
+- Save roster data locally in the browser with a password gate
+- Encrypt roster data in localStorage with AES-256-GCM under a PBKDF2-derived key
 - Generate QR codes for each aviator's dedication URL
 - Filter the roster by name, status, and component
 - Show live stats for total, KIA, living, active, guard, and reserve counts
@@ -127,9 +127,19 @@ If your machine uses `python3` instead, use:
 python3 -m http.server 8000
 ```
 
+### Roster password
+
+The roster password derives a key with PBKDF2-SHA256 (310,000 iterations) over a random salt, and the roster is encrypted with AES-256-GCM. The password itself is never stored: a small verifier blob proves a typed password is right, so a wrong one is rejected without the password ever sitting on disk beside the data it protects.
+
+Earlier versions did store the password in plain text next to the ciphertext, and derived the key from a single unsalted SHA-256. A roster saved that way is upgraded automatically the first time it is unlocked with its existing password - nothing is deleted until the roster has been re-encrypted under the new scheme, and the same password keeps working afterwards.
+
+Because the key comes from the password alone, a lost password means a lost roster. **Lock** only clears the key from memory and returns to the unlock screen; erasing an unreadable roster is a separate, explicitly confirmed action on that screen.
+
+Password protection uses the Web Crypto API, which browsers expose only in a secure context, so serve the app over HTTPS or `http://localhost`.
+
 ## Security notes
 
-This app uses encrypted localStorage to protect roster data and displays a password gate before loading the roster. The app remains local-only and does not send data to a server.
+Both apps are local-only and send no data to a server. Roster and inventory data live in this browser's `localStorage`, and the QR libraries are vendored in `assets/vendor/`, so neither app depends on a CDN at runtime.
 
 ## Deployment later
 
