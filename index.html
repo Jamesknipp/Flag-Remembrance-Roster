@@ -439,7 +439,7 @@
           <div class="button-row">
             <button type="submit" class="primary" id="authSubmit">Continue</button>
             <button type="button" class="secondary hidden" id="skipPasswordBtn">Continue without password</button>
-            <button type="button" class="secondary hidden" id="logoutBtn">Lock roster</button>
+            <button type="button" class="secondary hidden" id="logoutBtn">Forgot password - start over</button>
           </div>
         </form>
         <div id="authMessage" class="auth-message" aria-live="polite"></div>
@@ -589,10 +589,13 @@
 
     <input id="importFileInput" type="file" accept="application/json" class="hidden" />
 
-    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+    <!-- Vendored locally so QR codes still render with no network. -->
+    <script src="assets/vendor/qrcode.js"></script>
     <script>
       const STORAGE_KEY = 'flag-remembrance-roster-v1';
       const PASSWORD_KEY = 'flag-remembrance-roster-password';
+      const PBKDF2_ITERATIONS = 310000;
+      const KEY_CHECK_TEXT = 'flag-remembrance-roster';
 
       const aviatorForm = document.getElementById('aviatorForm');
       const rosterTableBody = document.getElementById('rosterTableBody');
@@ -618,7 +621,8 @@
       const batchContent = document.getElementById('batchContent');
 
       let aviators = [];
-      let currentPassword = '';
+      let currentKey = null;
+      let currentSalt = null;
 
       function safeText(value) {
         return value == null ? '' : String(value);
@@ -648,20 +652,50 @@
         }
       }
 
-      function getStoredPassword() {
-        return localStorage.getItem(PASSWORD_KEY) || '';
+      function cryptoAvailable() {
+        return !!(window.crypto && window.crypto.subtle && window.isSecureContext);
       }
 
-      function setStoredPassword(password) {
-        localStorage.setItem(PASSWORD_KEY, password);
+      // Returns { kind: 'none' } | { kind: 'legacy', password } | { kind: 'v2', record }.
+      // 'legacy' is the pre-migration format, where the password itself sat in
+      // localStorage next to the ciphertext it protected.
+      function readPasswordRecord() {
+        const raw = localStorage.getItem(PASSWORD_KEY);
+        if (!raw) return { kind: 'none' };
+
+        try {
+          const parsed = JSON.parse(raw);
+          if (parsed && parsed.version === 2 && parsed.salt && parsed.check) {
+            return { kind: 'v2', record: parsed };
+          }
+        } catch (error) {
+          // Not JSON, so it is the old plaintext password.
+        }
+
+        return { kind: 'legacy', password: raw };
       }
 
-      function clearStoredPassword() {
+      function hasPasswordRecord() {
+        return readPasswordRecord().kind !== 'none';
+      }
+
+      async function writePasswordRecord(key, salt) {
+        const check = await encryptText(KEY_CHECK_TEXT, key);
+        localStorage.setItem(PASSWORD_KEY, JSON.stringify({
+          version: 2,
+          kdf: 'PBKDF2-SHA256',
+          iterations: PBKDF2_ITERATIONS,
+          salt: bufferToBase64(salt),
+          check: check
+        }));
+      }
+
+      function clearPasswordRecord() {
         localStorage.removeItem(PASSWORD_KEY);
       }
 
       function showAuth(mode) {
-        const hasPassword = !!getStoredPassword();
+        const hasPassword = hasPasswordRecord();
         authOverlay.classList.remove('hidden');
         authForm.reset();
         authMessage.textContent = '';
@@ -679,20 +713,61 @@
           skipPasswordBtn.classList.add('hidden');
           logoutBtn.classList.remove('hidden');
         }
+
+        if (!cryptoAvailable()) {
+          authMessage.textContent = 'Password protection needs a secure page. Serve this file over https:// or http://localhost.';
+        }
+      }
+
+      // The roster is encrypted with a key derived from the password, so a lost
+      // password means lost data. Make that an explicit, confirmed choice rather
+      // than something that happens silently behind a new password.
+      async function resetEncryptedRoster() {
+        const confirmed = window.confirm(
+          'Erase the encrypted roster and start over?\n\n' +
+          'The roster can only be read with its password, so this cannot be undone. ' +
+          'Cancel if you want to keep trying the password.'
+        );
+        if (!confirmed) return;
+
+        localStorage.removeItem(STORAGE_KEY);
+        clearPasswordRecord();
+        currentKey = null;
+        currentSalt = null;
+        aviators = [];
+        renderAll();
+        showAuth('create');
       }
 
       function hideAuth() {
         authOverlay.classList.add('hidden');
       }
 
-      async function deriveKey(password) {
-        const encoder = new TextEncoder();
-        const digest = await crypto.subtle.digest('SHA-256', encoder.encode(password));
+      async function deriveKey(password, salt) {
+        const material = await crypto.subtle.importKey(
+          'raw',
+          new TextEncoder().encode(password),
+          'PBKDF2',
+          false,
+          ['deriveKey']
+        );
+        return crypto.subtle.deriveKey(
+          { name: 'PBKDF2', salt: salt, iterations: PBKDF2_ITERATIONS, hash: 'SHA-256' },
+          material,
+          { name: 'AES-GCM', length: 256 },
+          false,
+          ['encrypt', 'decrypt']
+        );
+      }
+
+      // The original scheme: an unsalted single SHA-256 of the password. Kept only
+      // so existing rosters can be read once and re-encrypted properly.
+      async function legacyDeriveKey(password) {
+        const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(password));
         return crypto.subtle.importKey('raw', digest, 'AES-GCM', false, ['encrypt', 'decrypt']);
       }
 
-      async function encryptText(text, password) {
-        const key = await deriveKey(password);
+      async function encryptText(text, key) {
         const iv = crypto.getRandomValues(new Uint8Array(12));
         const encoded = new TextEncoder().encode(text);
         const encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, encoded);
@@ -702,8 +777,7 @@
         };
       }
 
-      async function decryptText(payload, password) {
-        const key = await deriveKey(password);
+      async function decryptText(payload, key) {
         const iv = base64ToBuffer(payload.iv);
         const data = base64ToBuffer(payload.data);
         const decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, data);
@@ -727,8 +801,8 @@
 
       async function saveRoster() {
         const rosterJson = JSON.stringify(aviators, null, 2);
-        if (currentPassword) {
-          const encrypted = await encryptText(rosterJson, currentPassword);
+        if (currentKey) {
+          const encrypted = await encryptText(rosterJson, currentKey);
           localStorage.setItem(STORAGE_KEY, JSON.stringify({ encrypted: true, iv: encrypted.iv, data: encrypted.data }));
         } else {
           localStorage.setItem(STORAGE_KEY, rosterJson);
@@ -742,8 +816,8 @@
         try {
           const parsed = JSON.parse(raw);
           if (parsed && parsed.encrypted && parsed.iv && parsed.data) {
-            if (!currentPassword) return [];
-            const decrypted = await decryptText(parsed, currentPassword);
+            if (!currentKey) return [];
+            const decrypted = await decryptText(parsed, currentKey);
             const roster = JSON.parse(decrypted);
             return Array.isArray(roster) ? roster : [];
           }
@@ -1051,12 +1125,13 @@
 
       async function unlockApp() {
         const password = authPassword.value.trim();
-        const hasPassword = !!getStoredPassword();
+        const stored = readPasswordRecord();
 
-        if (!hasPassword) {
+        if (stored.kind === 'none') {
           const confirm = authConfirmPassword.value.trim();
           if (!password && !confirm) {
-            currentPassword = '';
+            currentKey = null;
+            currentSalt = null;
             hideAuth();
             aviators = await loadRoster();
             renderAll();
@@ -1070,38 +1145,110 @@
             authMessage.textContent = 'Passwords do not match.';
             return;
           }
-          setStoredPassword(password);
-          currentPassword = password;
+          if (!cryptoAvailable()) {
+            authMessage.textContent = 'Password protection needs a secure page. Serve this file over https:// or http://localhost.';
+            return;
+          }
+
+          authMessage.textContent = 'Encrypting roster...';
+          currentSalt = crypto.getRandomValues(new Uint8Array(16));
+          currentKey = await deriveKey(password, currentSalt);
+          await writePasswordRecord(currentKey, currentSalt);
           hideAuth();
           aviators = await loadRoster();
+          await saveRoster();
           renderAll();
           return;
         }
 
-        if (password !== getStoredPassword()) {
-          authMessage.textContent = 'Incorrect password.';
+        if (!password) {
+          authMessage.textContent = 'Enter the roster password.';
+          return;
+        }
+        if (!cryptoAvailable()) {
+          authMessage.textContent = 'Password protection needs a secure page. Serve this file over https:// or http://localhost.';
           return;
         }
 
-        currentPassword = password;
+        authMessage.textContent = 'Checking...';
+
+        if (stored.kind === 'legacy') {
+          const migrated = await migrateLegacyPassword(password, stored.password);
+          if (!migrated) return;
+        } else {
+          const salt = base64ToBuffer(stored.record.salt);
+          const key = await deriveKey(password, salt);
+          try {
+            const check = await decryptText(stored.record.check, key);
+            if (check !== KEY_CHECK_TEXT) throw new Error('check mismatch');
+          } catch (error) {
+            authMessage.textContent = 'Incorrect password.';
+            return;
+          }
+          currentKey = key;
+          currentSalt = salt;
+        }
+
         hideAuth();
         aviators = await loadRoster();
         renderAll();
+      }
+
+      // One-time upgrade for rosters saved under the old scheme, where the password
+      // was stored in the clear and the key was an unsalted SHA-256 of it. The old
+      // record is removed only once the roster has been re-encrypted successfully.
+      async function migrateLegacyPassword(password, storedPassword) {
+        if (password !== storedPassword) {
+          authMessage.textContent = 'Incorrect password.';
+          return false;
+        }
+
+        try {
+          const legacyKey = await legacyDeriveKey(password);
+          const raw = localStorage.getItem(STORAGE_KEY);
+          let roster = [];
+
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed && parsed.encrypted && parsed.iv && parsed.data) {
+              roster = JSON.parse(await decryptText(parsed, legacyKey));
+            } else if (Array.isArray(parsed)) {
+              roster = parsed;
+            }
+          }
+
+          currentSalt = crypto.getRandomValues(new Uint8Array(16));
+          currentKey = await deriveKey(password, currentSalt);
+          aviators = Array.isArray(roster) ? roster : [];
+          await saveRoster();
+          await writePasswordRecord(currentKey, currentSalt);
+          return true;
+        } catch (error) {
+          console.error('Could not upgrade the stored password', error);
+          currentKey = null;
+          currentSalt = null;
+          authMessage.textContent = 'That password did not open the roster, so nothing was changed.';
+          return false;
+        }
       }
 
       async function skipPasswordAccess() {
-        currentPassword = '';
+        currentKey = null;
+        currentSalt = null;
         hideAuth();
         aviators = await loadRoster();
         renderAll();
       }
 
+      // Locking drops the key from memory. It must not touch the password record:
+      // doing so used to leave the encrypted roster unreadable, and a different
+      // password then overwrote it with an empty one.
       function lockApp() {
-        currentPassword = '';
-        clearStoredPassword();
+        currentKey = null;
+        currentSalt = null;
         aviators = [];
         renderAll();
-        showAuth('create');
+        showAuth(hasPasswordRecord() ? 'unlock' : 'create');
       }
 
       function bindEvents() {
@@ -1114,11 +1261,7 @@
           await skipPasswordAccess();
         });
 
-        logoutBtn.addEventListener('click', () => {
-          currentPassword = '';
-          hideAuth();
-          showAuth('unlock');
-        });
+        logoutBtn.addEventListener('click', resetEncryptedRoster);
 
         lockBtn.addEventListener('click', () => {
           lockApp();
@@ -1141,13 +1284,7 @@
       }
 
       bindEvents();
-      const savedPassword = getStoredPassword();
-      if (savedPassword) {
-        currentPassword = savedPassword;
-        showAuth('unlock');
-      } else {
-        showAuth('create');
-      }
+      showAuth(hasPasswordRecord() ? 'unlock' : 'create');
     </script>
   </body>
 </html>
