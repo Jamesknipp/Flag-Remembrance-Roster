@@ -14,6 +14,23 @@ A fully local roster app for tracking aviators, their unit assignments, service 
 - Import a roster from JSON
 - Run entirely client-side with no backend
 
+## Also in this repo: Parts Data Cleaner
+
+`parts-data-cleaner.html` is a separate single-page tool for cleaning supplier parts data. Open it in a browser, load a CSV or Excel (.xlsx) file or paste rows, and it:
+
+- cuts supplier names, product lines, SKUs and sales filler ("Brand New", "Free Shipping") out of part descriptions
+- cuts repeated words and phrases, and drops rows that end up identical
+- moves year, make, model, engine, drive type and body style into their own columns, so fitment filters search those columns and never the description text
+- shows every cut and every extracted value highlighted against the original, and exports the result as CSV
+
+The supplier list, filler list and make/model list are all editable on the page. Nothing is uploaded; files are read in the browser.
+
+To check the cleaning rules after editing them:
+
+```bash
+node scripts/test-parts-cleaner.mjs
+```
+
 ## Run locally
 
 Because this is a static app, you can launch it directly in a browser or serve it with a local web server.
@@ -66,5 +83,6 @@ Flag-Remembrance-Roster/
 ├── README.md
 ├── .gitignore
 ├── timezone-clock.html
+├── parts-data-cleaner.html
 └── .git
 ```

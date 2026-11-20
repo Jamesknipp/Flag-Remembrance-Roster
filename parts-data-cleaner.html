@@ -1,0 +1,1685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Parts Data Cleaner</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+  /* Layout: a parts-counter workbench. Setup rail on the left (data, columns, rules),
+     the cleaned ledger on the right. On a phone the ledger follows the data loader. */
+  :root {
+    --bg: #eef1f4;
+    --surface: #ffffff;
+    --surface-2: #f5f7f9;
+    --ink: #17212c;
+    --muted: #5a6675;
+    --line: #d3dae2;
+    --accent: #1c4fd6;
+    --accent-ink: #ffffff;
+    --accent-soft: #e3ebfd;
+    --cut: #b3261e;
+    --cut-soft: #fbe9e7;
+    --year: #7a4f00;   --year-bg: #fdf0cf;
+    --make: #0b57a4;   --make-bg: #deecfb;
+    --model: #0a6558;  --model-bg: #d9f2ec;
+    --engine: #6237ad; --engine-bg: #ece3fb;
+    --other: #46525f;  --other-bg: #e4e8ed;
+    --ok: #1a7f4b;
+    --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-data: ui-monospace, "SF Mono", "Cascadia Mono", "Roboto Mono", Consolas, "Liberation Mono", monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #10151b; --surface: #171e26; --surface-2: #1d2630; --ink: #e6ebf0; --muted: #98a5b3; --line: #2c3742;
+      --accent: #7ea6ff; --accent-ink: #0c1422; --accent-soft: #1c2a47;
+      --cut: #ff8a80; --cut-soft: #3a1d1b;
+      --year: #f2c661; --year-bg: #3a2e10; --make: #8cc0f7; --make-bg: #14304d;
+      --model: #6fd6c3; --model-bg: #11362f; --engine: #c2a5f5; --engine-bg: #2c2147;
+      --other: #b4bfca; --other-bg: #28323d; --ok: #62c990;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #10151b; --surface: #171e26; --surface-2: #1d2630; --ink: #e6ebf0; --muted: #98a5b3; --line: #2c3742;
+    --accent: #7ea6ff; --accent-ink: #0c1422; --accent-soft: #1c2a47;
+    --cut: #ff8a80; --cut-soft: #3a1d1b;
+    --year: #f2c661; --year-bg: #3a2e10; --make: #8cc0f7; --make-bg: #14304d;
+    --model: #6fd6c3; --model-bg: #11362f; --engine: #c2a5f5; --engine-bg: #2c2147;
+    --other: #b4bfca; --other-bg: #28323d; --ok: #62c990;
+    color-scheme: dark;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 14px/1.45 var(--font-ui);
+  }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .wrap {
+    max-width: 1500px;
+    margin: 0 auto;
+    padding-block: 20px 48px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    display: grid;
+    gap: 20px;
+  }
+
+  .masthead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 18px; }
+  .masthead h1 { margin: 0; font-size: 1.5rem; letter-spacing: -0.01em; text-wrap: balance; }
+  .masthead p { margin: 0; color: var(--muted); max-width: 70ch; }
+  .local-note { font-family: var(--font-data); font-size: 0.78rem; color: var(--ok); white-space: nowrap; }
+
+  .bench {
+    display: grid;
+    gap: 20px;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "data" "results" "setup";
+    align-items: start;
+  }
+  @media (min-width: 1000px) {
+    .bench {
+      grid-template-columns: 340px minmax(0, 1fr);
+      grid-template-areas: "data results" "setup results";
+      grid-template-rows: auto 1fr;
+    }
+  }
+  .area-data { grid-area: data; }
+  .area-setup { grid-area: setup; display: grid; gap: 20px; }
+  .area-results { grid-area: results; min-width: 0; display: grid; gap: 14px; }
+
+  .label {
+    font-family: var(--font-data);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--muted);
+    margin: 0 0 8px;
+    font-weight: 600;
+  }
+  .block { display: grid; gap: 10px; min-width: 0; }
+  .block + .block { border-top: 1px solid var(--line); padding-top: 18px; }
+  .hint { color: var(--muted); font-size: 0.85rem; margin: 0; }
+
+  .btn {
+    border: 1px solid var(--line);
+    background: var(--surface);
+    border-radius: 6px;
+    padding: 7px 12px;
+    cursor: pointer;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .btn:hover { border-color: var(--accent); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .btn.small { padding: 4px 9px; font-weight: 500; font-size: 0.85rem; }
+  .btn-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+  .drop {
+    border: 1.5px dashed var(--line);
+    border-radius: 8px;
+    padding: 14px;
+    background: var(--surface);
+    display: grid;
+    gap: 10px;
+  }
+  .drop.over { border-color: var(--accent); background: var(--accent-soft); }
+  .source-line { font-family: var(--font-data); font-size: 0.8rem; overflow-wrap: anywhere; }
+  .tag {
+    display: inline-block; font-family: var(--font-data); font-size: 0.7rem; text-transform: uppercase;
+    letter-spacing: 0.06em; padding: 1px 6px; border-radius: 3px; background: var(--year-bg); color: var(--year);
+    margin-right: 6px;
+  }
+
+  textarea, select, input[type="text"], input[type="number"], input[type="search"] {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 7px 9px;
+  }
+  textarea { font-family: var(--font-data); font-size: 0.8rem; resize: vertical; min-height: 84px; line-height: 1.5; }
+  .field { display: grid; gap: 4px; min-width: 0; }
+  .field > span, .field > label { font-size: 0.85rem; font-weight: 600; }
+  .field small { color: var(--muted); font-weight: 400; }
+  .map-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .map-grid .wide { grid-column: 1 / -1; }
+  .checks { display: flex; flex-wrap: wrap; gap: 6px 14px; }
+  .check { display: flex; gap: 7px; align-items: flex-start; font-size: 0.88rem; }
+  .check input { margin-top: 3px; accent-color: var(--accent); }
+  details > summary { cursor: pointer; font-weight: 600; font-size: 0.88rem; }
+  details[open] > summary { margin-bottom: 8px; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    font-family: var(--font-data); font-size: 0.76rem;
+    border: 1px solid var(--line); background: var(--surface); border-radius: 999px;
+    padding: 2px 9px; cursor: pointer;
+  }
+  .chip:hover { border-color: var(--cut); color: var(--cut); text-decoration: line-through; }
+  .chip b { font-weight: 500; color: var(--muted); margin-left: 4px; }
+
+  .stats { display: flex; flex-wrap: wrap; gap: 8px 26px; align-items: baseline; }
+  .stat { display: flex; align-items: baseline; gap: 7px; }
+  .stat strong { font-family: var(--font-data); font-size: 1.25rem; font-variant-numeric: tabular-nums; }
+  .stat span { color: var(--muted); font-size: 0.85rem; }
+
+  .filters {
+    display: grid; gap: 8px;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    align-items: end;
+  }
+  .filters .grow { grid-column: span 2; }
+  @media (max-width: 420px) { .filters .grow { grid-column: auto; } }
+
+  .ledger { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; min-width: 0; }
+  .ledger-top { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; justify-content: space-between; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 0.78rem; color: var(--muted); align-items: center; }
+  .scroller { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; min-width: 900px; }
+  th {
+    text-align: left; font-family: var(--font-data); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--muted); font-weight: 600; padding: 8px 10px; background: var(--surface-2); border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+  }
+  td { padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr:last-child td { border-bottom: 0; }
+  td.num { font-family: var(--font-data); font-variant-numeric: tabular-nums; color: var(--muted); font-size: 0.78rem; white-space: nowrap; }
+  td.orig { font-family: var(--font-data); font-size: 0.78rem; line-height: 1.7; min-width: 300px; overflow-wrap: anywhere; }
+  td.clean { font-weight: 600; min-width: 180px; }
+  td.fit { font-family: var(--font-data); font-size: 0.8rem; font-variant-numeric: tabular-nums; }
+  td.empty-cell { color: var(--muted); }
+  .m { border-radius: 3px; padding: 1px 2px; }
+  .m-S, .m-F { color: var(--cut); background: var(--cut-soft); text-decoration: line-through; }
+  .m-G, .m-R { color: var(--muted); text-decoration: line-through; }
+  .m-Y { color: var(--year); background: var(--year-bg); }
+  .m-K { color: var(--make); background: var(--make-bg); }
+  .m-M { color: var(--model); background: var(--model-bg); }
+  .m-E { color: var(--engine); background: var(--engine-bg); }
+  .m-D, .m-B { color: var(--other); background: var(--other-bg); }
+  .none { padding: 28px 14px; text-align: center; color: var(--muted); }
+  .pager { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; padding: 8px 12px; border-top: 1px solid var(--line); font-size: 0.85rem; color: var(--muted); }
+
+  .toast {
+    position: fixed; left: 50%; transform: translateX(-50%);
+    bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+    background: var(--ink); color: var(--bg); padding: 8px 14px; border-radius: 6px; font-size: 0.88rem;
+    max-width: calc(100% - 32px); z-index: 20;
+  }
+  .error { color: var(--cut); font-size: 0.88rem; margin: 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="masthead">
+    <h1>Parts Data Cleaner</h1>
+    <p>Strips supplier names, sales filler and repeated words out of part descriptions, and files year, make, model and engine into their own columns so fitment filters never have to read the description.</p>
+    <span class="local-note">Runs in this browser. Nothing is uploaded.</span>
+  </header>
+
+  <div class="bench">
+    <section class="area-data block" aria-labelledby="h-data">
+      <h2 class="label" id="h-data">Data</h2>
+      <div class="drop" id="drop">
+        <div class="source-line" id="source-line"></div>
+        <div class="btn-row">
+          <button class="btn primary" id="btn-file" type="button">Open a file</button>
+          <button class="btn" id="btn-example" type="button">Load example</button>
+          <input type="file" id="file-input" accept=".csv,.tsv,.txt,.xlsx" hidden>
+        </div>
+        <p class="hint">CSV, tab-delimited text or Excel (.xlsx). You can also drop a file here.</p>
+        <div class="field" id="sheet-field" hidden>
+          <label for="sheet-select">Sheet</label>
+          <select id="sheet-select"></select>
+        </div>
+        <details id="paste-details">
+          <summary>Paste rows instead</summary>
+          <div class="block">
+            <textarea id="paste-box" rows="5" placeholder="Paste rows copied from a spreadsheet, or one description per line"></textarea>
+            <div class="btn-row"><button class="btn" id="btn-paste" type="button">Clean pasted rows</button></div>
+          </div>
+        </details>
+        <p class="error" id="load-error" hidden></p>
+      </div>
+    </section>
+
+    <div class="area-setup">
+      <section class="block" aria-labelledby="h-cols">
+        <h2 class="label" id="h-cols">Columns</h2>
+        <div class="map-grid">
+          <div class="field wide">
+            <label for="map-desc">Description to clean</label>
+            <select id="map-desc"></select>
+          </div>
+          <div class="field"><label for="map-year">Year <small>if separate</small></label><select id="map-year"></select></div>
+          <div class="field"><label for="map-make">Make <small>if separate</small></label><select id="map-make"></select></div>
+          <div class="field"><label for="map-model">Model <small>if separate</small></label><select id="map-model"></select></div>
+          <div class="field"><label for="map-engine">Engine <small>if separate</small></label><select id="map-engine"></select></div>
+        </div>
+        <div class="field">
+          <span>Remove these columns' values from the description</span>
+          <div class="checks" id="strip-cols"></div>
+          <p class="hint">Tick brand, SKU or part-number columns. If a row's own value shows up inside its description, it is cut.</p>
+        </div>
+      </section>
+
+      <section class="block" aria-labelledby="h-rules">
+        <h2 class="label" id="h-rules">Rules</h2>
+        <div class="field">
+          <label for="t-supplier">Supplier names and product lines</label>
+          <textarea id="t-supplier" rows="5" spellcheck="false"></textarea>
+          <p class="hint">One per line or comma-separated. Whole words only, any capitalisation.</p>
+        </div>
+        <div class="field" id="freq-field" hidden>
+          <span>Common words still left in descriptions</span>
+          <div class="chips" id="freq-chips"></div>
+          <p class="hint">Click a word to add it to the supplier list.</p>
+        </div>
+        <div class="field">
+          <label for="t-filler">Sales filler</label>
+          <textarea id="t-filler" rows="4" spellcheck="false"></textarea>
+        </div>
+        <div class="map-grid">
+          <div class="field">
+            <label for="o-dupes">Repeated words</label>
+            <select id="o-dupes">
+              <option value="phrases">Drop repeated phrases</option>
+              <option value="words">Drop every repeated word</option>
+              <option value="off">Leave repeats</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="o-case">Capitalisation</label>
+            <select id="o-case">
+              <option value="keep">As written</option>
+              <option value="title">Title Case</option>
+              <option value="upper">UPPER CASE</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label class="check"><input type="checkbox" id="o-extras" checked><span>Also pull out drive type and body style (4WD, Crew Cab, Sedan)</span></label>
+          <label class="check"><input type="checkbox" id="o-split"><span>One row per vehicle when a part fits several</span></label>
+          <label class="check"><input type="checkbox" id="o-rowdupes" checked><span>Drop rows that are identical after cleaning</span></label>
+          <label class="check"><input type="checkbox" id="o-keeporig" checked><span>Keep the original description as an extra column in the export</span></label>
+        </div>
+        <details>
+          <summary>Add makes and models</summary>
+          <div class="field">
+            <textarea id="t-vehicles" rows="3" spellcheck="false" placeholder="Kenworth: T680, W900&#10;Polaris: RZR, Ranger, Sportsman"></textarea>
+            <p class="hint">One make per line, then a colon and its models. Use this for trucks, powersports or anything the built-in list misses.</p>
+          </div>
+        </details>
+        <div class="btn-row"><button class="btn small" id="btn-reset" type="button">Reset rules to defaults</button></div>
+      </section>
+    </div>
+
+    <section class="area-results" aria-labelledby="h-results">
+      <h2 class="label" id="h-results" style="margin:0">Cleaned rows</h2>
+      <div class="stats" id="stats"></div>
+      <div class="filters" id="filters">
+        <div class="field"><label for="f-year">Year</label><input type="number" id="f-year" inputmode="numeric" placeholder="Any"></div>
+        <div class="field"><label for="f-make">Make</label><select id="f-make"></select></div>
+        <div class="field"><label for="f-model">Model</label><select id="f-model"></select></div>
+        <div class="field"><label for="f-engine">Engine</label><select id="f-engine"></select></div>
+        <div class="field grow"><label for="f-part">Part <small>searches the cleaned description only</small></label><input type="search" id="f-part" placeholder="brake pad"></div>
+        <label class="check" style="align-self:center"><input type="checkbox" id="f-review"><span>No fitment found</span></label>
+      </div>
+      <div class="ledger">
+        <div class="ledger-top">
+          <div class="legend" aria-label="Colour key">
+            <span class="m m-S">cut</span>
+            <span class="m m-R">repeat</span>
+            <span class="m m-Y">year</span>
+            <span class="m m-K">make</span>
+            <span class="m m-M">model</span>
+            <span class="m m-E">engine</span>
+            <span class="m m-D">drive / body</span>
+          </div>
+          <div class="btn-row">
+            <button class="btn small" id="btn-copy" type="button">Copy for Excel</button>
+            <button class="btn small primary" id="btn-download" type="button">Download CSV</button>
+          </div>
+        </div>
+        <div class="scroller">
+          <table>
+            <thead><tr>
+              <th>#</th><th>Original</th><th>Part</th><th>Years</th><th>Make</th><th>Model</th><th>Engine</th><th>Drive / body</th>
+            </tr></thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+        <div class="none" id="no-rows" hidden>No rows match these filters.</div>
+        <div class="pager">
+          <span id="page-info"></span>
+          <span class="btn-row">
+            <button class="btn small" id="btn-prev" type="button">Previous</button>
+            <button class="btn small" id="btn-next" type="button">Next</button>
+          </span>
+        </div>
+      </div>
+      <p class="hint" id="export-note"></p>
+    </section>
+  </div>
+</div>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script id="engine">
+/* Cleaning engine. No DOM access in this block so it can be tested on its own
+   (see scripts/test-parts-cleaner.mjs). */
+const PartsCleaner = (function () {
+  'use strict';
+
+  const FILL = '\u0001';
+  const MAX_YEAR = new Date().getFullYear() + 2;
+
+  /* Make|alias: Model|alias, Model?, Model*
+     ~Make  = only counts as a make when one of its own models follows (Ram 1500, Mini Cooper)
+     Model? = everyday word; only counts when its make is also in the row (Dodge Charger vs battery charger)
+     Model* = short code that is safe without the make (CR-V, WRX)
+     Codes of three characters or fewer need the make in the row; bare numbers must sit right after it. */
+  const VEHICLES = `
+Acura: CL, ILX, Integra, Legend?, MDX*, NSX, RDX*, RL, RLX, RSX, TL, TLX, TSX*, ZDX, Vigor?
+Alfa Romeo|Alfa: Giulia, Stelvio, Tonale, 4C
+Audi: A3, A4, A5, A6, A7, A8, Q3, Q5, Q7, Q8, S3, S4, S5, S6, S7, S8, RS3, RS5, RS7, SQ5, TT, R8, Allroad, e-tron
+BMW: 1 Series, 2 Series, 3 Series, 4 Series, 5 Series, 6 Series, 7 Series, 8 Series, 128i, 135i, 228i, 230i, 320i, 323i, 325i, 325xi, 325Ci, 328i, 328xi, 330i, 330xi, 330Ci, 335i, 335xi, 340i, 428i, 430i, 435i, 440i, 525i, 528i, 530i, 535i, 540i, 545i, 550i, 640i, 645Ci, 650i, 740i, 740Li, 745i, 745Li, 750i, 750Li, 760Li, M2, M3, M4, M5, M6, X1, X2, X3, X4, X5, X6, X7, Z3, Z4, i3, i4, i8, iX
+Buick: Cascada, Century?, Enclave, Encore, Envision, LaCrosse, LeSabre, Lucerne, Park Avenue, Rainier, Regal, Rendezvous, Riviera, Roadmaster, Skylark, Terraza, Verano
+Cadillac: ATS, CTS, CT4, CT5, CT6, DTS, DeVille, Eldorado, Escalade ESV, Escalade EXT, Escalade, Fleetwood, Seville, SRX, STS, XLR, XT4, XT5, XT6, XTS, ELR, Catera
+Chevrolet|Chevy|Chev: Astro?, Avalanche?, Aveo, Bel Air, Beretta, Blazer?, Bolt?, Camaro, Caprice, Captiva, Cavalier, Chevelle, Cobalt?, Colorado?, Corsica, Corvette, Cruze, El Camino, Equinox, Express?, HHR*, Impala, Lumina, Malibu, Metro?, Monte Carlo, Nova?, Prizm, S-10 Blazer, S-10, Silverado, Sonic?, Spark?, SS, SSR, Suburban, Tahoe, Tracker?, TrailBlazer, Traverse?, Trax, Uplander, Venture?, Volt?, C1500, C2500, C3500, K1500, K2500, K3500, C10?, K10?, K5 Blazer, 1500, 2500, 3500
+Chrysler: 200, 300C, 300M, 300, Aspen?, Cirrus, Concorde, Crossfire, LHS, LeBaron, New Yorker, Pacifica, PT Cruiser, Sebring, Town & Country|Town and Country, Voyager?
+Dodge: Avenger?, Caliber?, Grand Caravan, Caravan, Challenger?, Charger?, Dakota, Dart?, Durango, Hornet?, Intrepid?, Journey?, Magnum?, Neon?, Nitro?, Ramcharger, Ram?, Sprinter?, Stealth?, Stratus, Viper?, 1500, 2500, 3500
+Fiat: 500L, 500X, 500, 124 Spider
+Ford: Aerostar, Bronco Sport, Bronco II, Bronco?, C-Max, Contour?, Crown Victoria, E-150, E-250, E-350, E-450, Econoline, EcoSport, Edge?, Escape?, Escort?, Excursion?, Expedition?, Explorer Sport Trac, Explorer?, F-100, F-150, F-250, F-350, F-450, F-550, F-650, F-750, Fiesta?, Five Hundred, Flex?, Focus?, Freestar, Freestyle?, Fusion?, Maverick?, Mustang Mach-E, Mustang, Probe?, Ranger?, Taurus X, Taurus, Tempo?, Thunderbird, Transit Connect, Transit?, Windstar
+~Genesis: G70, G80, G90, GV70, GV80
+Geo: Metro?, Prizm, Storm?, Tracker?
+GMC: Acadia, Canyon?, Envoy, Jimmy?, Safari?, Savana, Sierra, Sonoma, Terrain?, Yukon XL, Yukon, S15, 1500, 2500, 3500
+Honda: Accord, Civic, Clarity?, CR-V*, CR-Z, Crosstour, CRX, Del Sol, Element?, Fit?, HR-V*, Insight?, Odyssey, Passport?, Pilot?, Prelude, Ridgeline, S2000
+Hummer: H1, H2, H3T, H3
+Hyundai: Accent?, Azera, Elantra, Entourage?, Equus, Genesis Coupe, Genesis?, Ioniq, Kona, Palisade, Santa Cruz, Santa Fe, Sonata, Tiburon, Tucson, Veloster, Venue?, Veracruz, XG350
+Infiniti|Infinity: EX35, EX37, FX35, FX37, FX45, FX50, G20, G25, G35, G37, I30, I35, J30, JX35, M35, M37, M45, M56, Q40, Q45, Q50, Q60, Q70, QX4, QX30, QX50, QX56, QX60, QX70, QX80
+Isuzu: Amigo, Ascender, Axiom?, D-Max, Hombre, NPR, Rodeo?, Trooper?, VehiCROSS
+Jaguar: E-Pace, F-Pace, F-Type, S-Type, X-Type, XE, XF, XJ6, XJ8, XJR, XJ, XK8, XKR, XK
+Jeep: Grand Cherokee, Cherokee, Comanche, Commander?, Compass?, Gladiator?, Grand Wagoneer, Wagoneer, Liberty?, Patriot?, Renegade?, Wrangler, CJ5, CJ7
+Kia: Amanti, Borrego, Cadenza, Carnival?, EV6, Forte?, K5, K900, Magentis, Niro, Optima, Rio?, Rondo, Sedona, Seltos, Sephia, Sorento, Soul?, Spectra, Sportage, Stinger?, Telluride
+Land Rover|Landrover: Defender?, Discovery Sport, Discovery?, Freelander, LR2, LR3, LR4, Range Rover Evoque, Range Rover Sport, Range Rover Velar, Range Rover
+Lexus: CT200h, ES250, ES300h, ES300, ES330, ES350, GS300, GS350, GS400, GS430, GS450h, GS460, GX460, GX470, HS250h, IS250, IS300, IS350, LS400, LS430, LS460, LS600h, LX450, LX470, LX570, NX200t, NX300h, NX300, RC350, RX300, RX330, RX350, RX400h, RX450h, SC300, SC400, SC430, UX200, UX250h
+Lincoln: Aviator?, Blackwood, Continental?, Corsair?, LS, Mark LT, Mark VIII, Mark VII, MKC, MKS, MKT, MKX, MKZ, Nautilus, Navigator?, Town Car, Zephyr?
+Mazda: 2, 3|Mazda3, 5|Mazda5, 6|Mazda6, 323, 626, 929, B2300, B2500, B3000, B4000, CX-30, CX-50, CX-90, CX-3*, CX-5*, CX-7*, CX-9*, Mazdaspeed3, MX-5 Miata, Miata, MX-5*, MX-6, MPV, Millenia, Protege5, Protege, RX-7*, RX-8*, Tribute?
+Mercedes-Benz|Mercedes|Benz: A-Class, B-Class, C-Class, E-Class, G-Class, S-Class, M-Class, GL-Class, GLK-Class, R-Class, SL-Class, SLK-Class, CLK-Class, CLS-Class, CLA-Class, C230, C240, C250, C280, C300, C320, C350, CLA250, CLK320, CLK350, CLK430, CLK500, CLS500, CLS550, E300, E320, E350, E400, E430, E500, E550, G500, G550, GL350, GL450, GL550, GLA250, GLB250, GLC300, GLE350, GLE450, GLK350, GLS450, GLS550, ML320, ML350, ML430, ML500, ML550, R350, S430, S500, S550, S600, SL500, SL550, SLK230, SLK280, SLK320, SLK350, Sprinter, Metris
+Mercury: Cougar?, Grand Marquis, Marauder, Mariner?, Milan?, Montego, Monterey?, Mountaineer, Mystique, Sable, Tracer?, Villager
+~Mini: Cooper Countryman, Cooper Clubman, Cooper Paceman, Cooper, Countryman, Clubman
+Mitsubishi: 3000GT, Diamante, Eclipse Cross, Eclipse, Endeavor, Galant, Lancer Evolution, Lancer, Mirage, Montero Sport, Montero, Outlander Sport, Outlander, Raider?
+Nissan: 240SX, 300ZX, 350Z, 370Z, Altima, Armada?, Cube?, Frontier?, GT-R, Juke, Kicks?, Leaf?, Maxima, Murano, NV200, NV1500, NV2500, NV3500, Pathfinder, Quest?, Rogue Sport, Rogue?, Sentra, Titan XD, Titan?, Versa Note, Versa?, Xterra
+Oldsmobile|Olds: Alero, Aurora?, Bravada, Cutlass Supreme, Cutlass Ciera, Cutlass, Eighty-Eight, Intrigue?, Silhouette?
+Plymouth: Barracuda, Breeze?, Duster?, Grand Voyager, Voyager?, Neon?, Prowler, Road Runner
+Pontiac: Aztek, Bonneville, Firebird, Fiero, G3, G5, G6, G8, Grand Am, Grand Prix, GTO, Montana?, Solstice, Sunfire, Torrent?, Trans Am, Trans Sport, Vibe?
+Porsche: 911, 718, 924, 928, 944, 968, Boxster, Cayenne, Cayman, Macan, Panamera, Taycan
+~Ram: 1500, 2500, 3500, 4500, 5500, ProMaster City, ProMaster, Dakota
+Saab: 9-3, 9-5, 9-7X, 900, 9000
+Saturn: Astra, Aura?, Ion?, L200, L300, Outlook?, Relay?, Sky?, SL1, SL2, SC1, SC2, Vue
+Scion: FR-S, iA, iM, iQ, tC, xA, xB, xD
+Subaru: Ascent?, Baja, BRZ*, XV Crosstrek, Crosstrek, Forester, Impreza, Legacy?, Outback, Solterra, SVX, Tribeca, WRX STI, WRX*
+Suzuki: Aerio, Equator?, Forenza, Grand Vitara, Vitara, Kizashi, Reno?, Samurai, Sidekick, SX4, Verona, XL-7
+Tesla: Model 3, Model S, Model X, Model Y, Cybertruck
+Toyota: 4Runner, Avalon, bZ4X, C-HR, Camry Solara, Camry, Celica, Corolla Cross, Corolla, Cressida, Echo?, FJ Cruiser, GR86, Highlander, Land Cruiser, Matrix?, Mirai, MR2*, Paseo, Previa, Prius C, Prius V, Prius, RAV4, Sequoia, Sienna, Solara, Supra, T100, Tacoma, Tercel, Tundra, Venza, Yaris
+Volkswagen|VW: Arteon, Atlas?, New Beetle, Beetle?, Cabrio, CC, Corrado, Eos, Eurovan, GLI, Golf?, GTI*, ID.4, Jetta, Passat, Phaeton, Rabbit?, Routan, Taos, Tiguan, Touareg
+Volvo: 240, 740, 850, 940, 960, C30, C70, S40, S60, S70, S80, S90, V40, V50, V60, V70, V90, XC40, XC60, XC70, XC90
+`;
+
+  const DEFAULT_SUPPLIERS = [
+    'ACDelco Professional', 'ACDelco Gold', 'ACDelco Silver', 'ACDelco', 'A-Premium', 'Akebono', 'AP Exhaust', 'Beck/Arnley',
+    'Bendix', 'Bosal', 'Bosch', 'BWD', 'A1 Cardone', 'Cardone', 'Carquest', 'Centric', 'Dayco', 'Delphi', 'Denso', 'Depo',
+    'Detroit Axle', 'Dorman OE Solutions', 'OE Solutions', 'Dorman', 'Duralast Gold', 'Duralast', 'Fel-Pro', 'Four Seasons',
+    'Fram', 'Gates', 'GPD', 'K&N', 'KYB', 'Mahle', 'MasterPro', 'Mobil 1', 'Monroe', 'Quick-Strut', 'Moog', 'Mopar',
+    'Motorcraft', 'NAPA', 'NGK', 'Purolator', 'Raybestos', 'SKF', 'Spectra Premium', 'Standard Motor Products', 'SMP',
+    'Timken', 'TRQ', 'TYC', 'UAC', 'Wagner', 'Walker', 'WIX'
+  ].join('\n');
+
+  const DEFAULT_FILLER = [
+    'brand new', '100% new', 'new', 'high quality', 'top quality', 'premium quality', 'premium', 'OEM quality', 'OE quality',
+    'OE fitment', 'OEM fitment', 'direct fitment', 'OE replacement', 'OEM replacement', 'direct replacement', 'direct fit',
+    'exact fit', 'perfect fit', 'aftermarket', 'replacement', 'genuine', 'OEM', 'OE', 'free shipping', 'fast shipping',
+    'ships free', 'ships fast', 'same day shipping', 'in stock', 'hot sale', 'best seller', 'best price', 'lifetime warranty',
+    'limited warranty', 'warranty', 'satisfaction guaranteed', 'guaranteed', 'made in USA', 'top rated', 'professional grade'
+  ].join(', ');
+
+  const ENGINE_NAMES = {
+    duramax: 'Duramax', cummins: 'Cummins', powerstroke: 'Power Stroke', ecoboost: 'EcoBoost', ecotec: 'Ecotec',
+    ecodiesel: 'EcoDiesel', hemi: 'Hemi', vortec: 'Vortec', pentastar: 'Pentastar', triton: 'Triton', skyactiv: 'SkyActiv',
+    tdi: 'TDI', ivtec: 'i-VTEC', vtec: 'VTEC'
+  };
+  const QUALIFIERS = {
+    twinturbo: 'Twin Turbo', biturbo: 'Twin Turbo', turbodiesel: 'Turbo Diesel', turbocharged: 'Turbo', turbo: 'Turbo',
+    supercharged: 'Supercharged', diesel: 'Diesel', hybrid: 'Hybrid', flexfuel: 'Flex Fuel', ffv: 'Flex Fuel',
+    dohc: 'DOHC', sohc: 'SOHC', ohv: 'OHV', ohc: 'OHC', efi: 'EFI', mpfi: 'MPFI', sfi: 'SFI', gdi: 'GDI', fsi: 'FSI',
+    tfsi: 'TFSI', tsi: 'TSI'
+  };
+  const DRIVES = {
+    '4wd': '4WD', '4x4': '4WD', fourwheeldrive: '4WD', '4wheeldrive': '4WD', awd: 'AWD', allwheeldrive: 'AWD',
+    rwd: 'RWD', rearwheeldrive: 'RWD', fwd: 'FWD', frontwheeldrive: 'FWD', '2wd': '2WD', '4x2': '2WD',
+    twowheeldrive: '2WD', '2wheeldrive': '2WD'
+  };
+  const BODIES = {
+    crewcab: 'Crew Cab', extendedcab: 'Extended Cab', extcab: 'Extended Cab', regularcab: 'Regular Cab',
+    regcab: 'Regular Cab', standardcab: 'Regular Cab', doublecab: 'Double Cab', quadcab: 'Quad Cab', megacab: 'Mega Cab',
+    accesscab: 'Access Cab', kingcab: 'King Cab', clubcab: 'Club Cab', supercrew: 'SuperCrew', supercab: 'SuperCab',
+    sedan: 'Sedan', coupe: 'Coupe', hatchback: 'Hatchback', wagon: 'Wagon', shortbed: 'Short Bed', longbed: 'Long Bed'
+  };
+  const ACRONYMS = new Set(('ABS AC EGR PCV MAF MAP TPMS LED HID OE OEM CV EGT DPF DEF ECU ECM PCM TCM BCM IAC TPS VVT EVAP ' +
+    'HVAC DRL LH RH SUV ATV UTV USA PTO EV DC AWG NPT SAE DOT PS AT MT CVT EPS SRS OBD GPS USB RPM PSI').split(' '));
+  const SMALL_WORDS = new Set(['and', 'or', 'for', 'with', 'of', 'to', 'in', 'on', 'w/', 'w/o', 'a', 'the']);
+  const POSITION_WORDS = new Set(['and', 'or', 'with', 'w', 'for', 'to', 'of', 'in', 'a', 'the', 'left', 'right', 'front',
+    'rear', 'upper', 'lower', 'inner', 'outer', 'driver', 'passenger', 'side']);
+  const JOINERS = /^(?:and|with|w\/|&|\+|plus|includes?|including|or)$/i;
+
+  const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const keyOf = s => s.toLowerCase().replace(/[^a-z0-9&]/g, '');
+  /* "F-150" also matches F150 and F 150; "RAV4" also matches RAV-4. */
+  function flex(term) {
+    const parts = term.trim().split(/[\s\-]+/).filter(Boolean)
+      .flatMap(p => p.match(/[A-Za-z]+|\d+|[^A-Za-z\d]+/g) || []);
+    return parts.map(esc).join('[\\s\\-]?');
+  }
+  const bounded = body => new RegExp('(^|[^a-z0-9])(' + body + ')(?![a-z0-9])', 'gi');
+  const splitTerms = text => text.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+
+  function termRegex(text) {
+    const terms = [...new Set(splitTerms(text))].sort((a, b) => b.length - a.length);
+    if (!terms.length) return null;
+    return bounded(terms.map(t => esc(t).replace(/\s+/g, '\\s+')).join('|'));
+  }
+
+  function parseVehicles(text, makes) {
+    for (const raw of text.split(/\n+/)) {
+      const line = raw.trim();
+      if (!line) continue;
+      const colon = line.indexOf(':');
+      let head = (colon < 0 ? line : line.slice(0, colon)).trim();
+      if (!head) continue;
+      let weak = false;
+      if (head[0] === '~') { weak = true; head = head.slice(1).trim(); }
+      const names = head.split('|').map(s => s.trim()).filter(Boolean);
+      if (!names.length) continue;
+      let rec = makes.find(m => m.name.toLowerCase() === names[0].toLowerCase());
+      if (!rec) { rec = { name: names[0], aliases: [], weak, models: [] }; makes.push(rec); }
+      for (const n of names) if (!rec.aliases.includes(n)) rec.aliases.push(n);
+      if (colon < 0) continue;
+      for (let item of line.slice(colon + 1).split(',')) {
+        item = item.trim();
+        if (!item) continue;
+        let flag = '';
+        const last = item.slice(-1);
+        if (last === '?' || last === '*') { flag = last; item = item.slice(0, -1).trim(); }
+        const aliases = item.split('|').map(s => s.trim()).filter(Boolean);
+        if (aliases.length) rec.models.push({ name: aliases[0], aliases, flag });
+      }
+    }
+  }
+
+  const Y4 = '(?:19[2-9]\\d|20[0-4]\\d)';
+  const UNITS = '(?:mm|cm|in|inch|inches|ft|psi|amps?|volts?|oz|lbs?|qt|gal|pcs?|pieces?|pack|teeth|tooth|splines?|' +
+    'degrees?|gauge|ga|awg|mph|hp|ohms?|watts?|lumens?|rpm|mah|cca|gph|gpm|cfm|miles?|hours?|hrs?|kg|ml|cc|grit|series)';
+  const RE = {
+    yRange: new RegExp('(^|[^a-z0-9.#])(' + Y4 + '\\s*(?:-|~|to|thru|through)\\s*(?:' + Y4 + '|\\d\\d))(?![a-z0-9]|\\.\\d)', 'gi'),
+    yOpen: new RegExp('(^|[^a-z0-9.#\\-])(' + Y4 + '(?:\\s*\\+|\\s*-\\s*(?:up|on|present|newer|current|later|now)|' +
+      '\\s*(?:and|&)\\s*(?:up|newer|later)|\\s+(?:up|newer|onwards?|present)))(?![a-z0-9])', 'gi'),
+    yList: new RegExp('(^|[^a-z0-9.#\\-])(' + Y4 + '(?:(?:\\s*[\\/,&]\\s*|\\s+)' + Y4 + ')+)(?![a-z0-9]|\\.\\d)', 'gi'),
+    yShort: new RegExp('(^|[^a-z0-9.#\\-\\/])(\'?\\d\\d\\s*-\\s*\'?\\d\\d)(?![a-z0-9"\']|\\.\\d|\\s*' + UNITS + '\\b)', 'gi'),
+    yApos: /(^|[^a-z0-9.#])('\d\d)(?![a-z0-9"'])/gi,
+    ySingle: new RegExp('(^|[^a-z0-9.#\\-\\/])(' + Y4 + ')(?![a-z0-9]|\\.\\d|-\\d|\\s*' + UNITS + '\\b)', 'gi'),
+    disp: /(^|[^a-z0-9.])((1?\d\.\d)\s?(?:liters?|litres?|ltr|l))(?![a-z0-9])/gi,
+    dispT: /(^|[^a-z0-9.])((\d\.\d)T)(?![a-z0-9])/gi,
+    cc: /(^|[^a-z0-9.])((\d{2,4})\s?cc)(?![a-z0-9])/gi,
+    ci: /(^|[^a-z0-9.])((\d{3})\s?(?:cid|ci|cu\.?\s?in\.?))(?![a-z0-9])/gi,
+    conf: /(^|[^a-z0-9])((V|I|L)-?(4|5|6|8|10|12))(?![a-z0-9])/gi,
+    boxer: /(^|[^a-z0-9])((H|W)-?(4|6|8|12|16))(?![a-z0-9])/gi,
+    inline: /(^|[^a-z0-9])((?:inline|in-line|straight)[\s\-]?(4|5|6|8))(?![a-z0-9])/gi,
+    cyl: /(^|[^a-z0-9])((3|4|5|6|8|10|12)[\s\-]?(?:cylinders?|cyl))(?![a-z0-9]|\s+heads?\b)/gi,
+    engName: bounded('duramax|cummins|power[\\s\\-]?stroke|ecoboost|ecotec|ecodiesel|hemi|vortec|pentastar|triton|skyactiv|tdi|i-?vtec|vtec'),
+    vin: /(^|[^a-z0-9])(VIN\s*(?:code\s*)?[:=\-]?\s*([A-Z0-9]))(?![a-z0-9])/gi,
+    qual: bounded('twin[\\s\\-]?turbo|bi[\\s\\-]?turbo|turbo[\\s\\-]?diesel|turbocharged|turbo|supercharged|diesel|hybrid|' +
+      'flex[\\s\\-]?fuel|ffv|dohc|sohc|ohv|ohc|efi|mpfi|sfi|gdi|tfsi|fsi|tsi|(?:8|12|16|20|24|32)v'),
+    drive: bounded('4wd|4x4|awd|rwd|fwd|2wd|4x2|(?:four|all|rear|front|two|4|2)[\\s\\-]?wheel[\\s\\-]?drive'),
+    body: bounded('(?:crew|extended|ext|regular|reg|standard|double|quad|mega|access|king|club)[\\s\\-]?cab|super[\\s\\-]?crew|' +
+      'super[\\s\\-]?cab|sedan|coupe|hatchback|wagon|(?:short|long)[\\s\\-]?bed|[2-5][\\s\\-]?(?:doors?|dr)'),
+    warranty: /(^|[^a-z0-9])(\d+\s*-?\s*(?:years?|yrs?|months?|mos?|days?)\s+(?:limited\s+)?(?:warranty|guarantee))(?![a-z0-9])/gi,
+    series: /^(\s*[-\/,&]?\s*)((1500|2500|3500|4500|5500)(\s?HD)?)(?![a-z0-9])/i,
+    superDuty: /^(\s*)(super[\s\-]?duty)(?![a-z0-9])/i,
+    classic: /^(\s*)(classic)(?![a-z0-9])/i,
+    seriesBase: /^(?:Silverado|Sierra|Ram|Suburban|Express|Savana|Avalanche|Yukon XL|Sprinter|F-\d50)$/
+  };
+  const GLUE_WORDS = 'for|fits?|fitting|to fit|compatible with|compatible|works with|used on|with|w\\/|and|or|the|all|most|select|some|by|from|&';
+  const GLUE_ONLY = new RegExp('^(?:\\s|[,;:\\-\\/|&+()\\[\\]]|(?:' + GLUE_WORDS + ')(?![a-z0-9]))*$', 'i');
+  const GLUE_TAIL = new RegExp('(?:(?:^|[^a-z0-9])(?:' + GLUE_WORDS + ')|[,;:\\-\\/|&+(\\[])\\s*$', 'i');
+  const GLUE_HEAD = /^\s*(?:[)\]]|(?:models?|vehicles?|engines?|trucks?|cars?|only|applications?)(?=\s*(?:$|[,;.)\]\-|\/])))/i;
+  const SYMBOL_TAIL = /[,;:\-\/|&+(\[]\s*$/;
+
+  function compile(settings) {
+    settings = settings || {};
+    const makes = [];
+    parseVehicles(VEHICLES, makes);
+    if (settings.vehicles) parseVehicles(settings.vehicles, makes);
+
+    const makeMap = new Map();
+    const makePats = [];
+    const modelMap = new Map();
+    const modelPats = [];
+    const weak = new Set();
+    const weakFollow = {};
+    for (const mk of makes) {
+      for (const a of mk.aliases) {
+        makeMap.set(keyOf(a), mk.name);
+        makePats.push({ len: a.length, pat: flex(a) });
+      }
+      const own = [];
+      for (const md of mk.models) {
+        for (const a of md.aliases) {
+          const key = keyOf(a);
+          if (!modelMap.has(key)) { modelMap.set(key, []); modelPats.push({ len: a.length, pat: flex(a) }); }
+          modelMap.get(key).push({ make: mk.name, model: md.name, flag: md.flag });
+          own.push({ len: a.length, pat: flex(a) });
+        }
+      }
+      if (mk.weak) {
+        weak.add(mk.name);
+        own.sort((a, b) => b.len - a.len);
+        if (own.length) weakFollow[mk.name] = new RegExp('^[\\s\\-]*(?:' + own.map(o => o.pat).join('|') + ')(?![a-z0-9])', 'i');
+      }
+    }
+    const byLen = (a, b) => b.len - a.len;
+    makePats.sort(byLen);
+    modelPats.sort(byLen);
+
+    return {
+      supRe: termRegex(settings.suppliers == null ? DEFAULT_SUPPLIERS : settings.suppliers),
+      fillRe: termRegex(settings.filler == null ? DEFAULT_FILLER : settings.filler),
+      makeRe: bounded(makePats.map(p => p.pat).join('|')),
+      modelRe: bounded(modelPats.map(p => p.pat).join('|')),
+      makeMap, modelMap, weak, weakFollow,
+      dupes: settings.dupes || 'phrases',
+      casing: settings.casing || 'keep',
+      extras: settings.extras !== false
+    };
+  }
+
+  function normalize(text) {
+    return String(text == null ? '' : text)
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&nbsp;/gi, ' ').replace(/&amp;/gi, '&').replace(/&quot;/gi, '"').replace(/&#0?39;|&apos;/gi, "'")
+      .replace(/&lt;/gi, '<').replace(/&gt;/gi, '>')
+      .replace(/[‘’′]/g, "'").replace(/[“”″]/g, '"')
+      .replace(/[‐-―−]/g, '-')
+      .replace(/\s+/g, ' ').trim();
+  }
+
+  function makeState(text) {
+    const orig = normalize(text);
+    return {
+      orig, work: orig, marks: new Array(orig.length).fill(''),
+      consume(s, e, type) {
+        if (e <= s) return;
+        for (let i = s; i < e; i++) this.marks[i] = type;
+        this.work = this.work.slice(0, s) + FILL.repeat(e - s) + this.work.slice(e);
+      }
+    };
+  }
+
+  /* Runs a (prefix)(body) regex over the working text; fn returns a mark type to cut the body. */
+  function scan(st, re, fn) {
+    if (!re) return;
+    re.lastIndex = 0;
+    let m;
+    while ((m = re.exec(st.work))) {
+      const s = m.index + m[1].length, e = s + m[2].length;
+      const type = fn(m, s, e);
+      if (type) st.consume(s, e, type);
+      if (re.lastIndex <= m.index) re.lastIndex = m.index + 1;
+    }
+  }
+
+  const yy = n => (n <= MAX_YEAR % 100 ? 2000 + n : 1900 + n);
+  const validYear = y => y >= 1920 && y <= MAX_YEAR;
+
+  function extractYears(st, trustShort) {
+    const found = [];
+    let open = false;
+    scan(st, RE.yRange, m => {
+      const p = m[2].match(/^(\d{4})\D+(\d{2,4})$/);
+      if (!p) return;
+      const a = +p[1];
+      let b = +p[2];
+      if (p[2].length === 2) { b = Math.floor(a / 100) * 100 + b; if (b < a) b += 100; }
+      if (!validYear(a) || !validYear(b) || Math.abs(b - a) > 60) return;
+      found.push(Math.min(a, b), Math.max(a, b));
+      return 'Y';
+    });
+    scan(st, RE.yOpen, m => {
+      const a = +m[2].slice(0, 4);
+      if (!validYear(a)) return;
+      found.push(a); open = true;
+      return 'Y';
+    });
+    scan(st, RE.yList, m => {
+      const ys = m[2].match(/\d{4}/g).map(Number);
+      if (!ys.every(validYear)) return;
+      found.push(...ys);
+      return 'Y';
+    });
+    scan(st, RE.yShort, m => {
+      const p = m[2].match(/^('?)(\d\d)\s*-\s*('?)(\d\d)$/);
+      if (!p) return;
+      if (!trustShort && !p[1] && !p[3]) return;
+      const a = yy(+p[2]), b = yy(+p[4]);
+      if (!validYear(a) || !validYear(b) || b < a || b - a > 40) return;
+      found.push(a, b);
+      return 'Y';
+    });
+    scan(st, RE.yApos, m => {
+      if (!trustShort) return;
+      const a = yy(+m[2].slice(1));
+      if (!validYear(a)) return;
+      found.push(a);
+      return 'Y';
+    });
+    scan(st, RE.ySingle, m => {
+      const a = +m[2];
+      if (!validYear(a)) return;
+      found.push(a);
+      return 'Y';
+    });
+    if (!found.length) return { start: '', end: '', open: false };
+    const start = Math.min(...found), end = Math.max(...found);
+    return { start, end: open ? '' : end, open };
+  }
+
+  function prevMarked(st, s, types) {
+    let j = s - 1;
+    while (j >= 0 && /[\s\-,\/]/.test(st.orig[j])) j--;
+    return j >= 0 && types.includes(st.marks[j]) && st.marks[j] !== '';
+  }
+  function nextMarked(st, e, types) {
+    let j = e;
+    while (j < st.orig.length && /[\s\-,\/]/.test(st.orig[j])) j++;
+    return j < st.orig.length && types.includes(st.marks[j]) && st.marks[j] !== '';
+  }
+
+  function extractMakes(st, cfg, makes) {
+    scan(st, cfg.makeRe, (m, s, e) => {
+      const name = cfg.makeMap.get(keyOf(m[2]));
+      if (!name) return;
+      if (cfg.weak.has(name)) {
+        const follow = cfg.weakFollow[name];
+        if (!follow || !follow.test(st.work.slice(e))) return;
+        if (name === 'Ram' && /dodge[\s\-]*$/i.test(st.orig.slice(0, s))) return;
+      }
+      makes.add(name);
+      return 'K';
+    });
+  }
+
+  function extractModels(st, cfg, makes, vehicles) {
+    const found = [];
+    scan(st, cfg.modelRe, (m, s, e) => {
+      const key = keyOf(m[2]);
+      const cands = cfg.modelMap.get(key);
+      if (!cands) return;
+      const numeric = /^\d+$/.test(key);
+      if (numeric && (st.work[s - 1] === '.' || (st.work[e] === '.' && /\d/.test(st.work[e + 1] || '')))) return;
+      const inRow = cands.find(c => makes.has(c.make));
+      let pick = inRow;
+      if (!pick) {
+        const free = cands.find(c => c.flag === '*' || (c.flag !== '?' && key.length > 3 && !numeric));
+        if (!free) return;
+        pick = free;
+      }
+      if ((numeric || key.length <= 2) && pick.flag !== '*' && !prevMarked(st, s, 'YKM')) return;
+      makes.add(pick.make);
+
+      /* Truck series written after the name: "Silverado 1500", "Ram 1500 2500 3500", "F-350 Super Duty". */
+      let series = [];
+      let end = e;
+      if (!numeric) {
+        let sm;
+        while ((sm = RE.series.exec(st.work.slice(end)))) {
+          if (!series.length && /[\/,&]/.test(sm[1])) break;
+          series.push(sm[3] + (sm[4] ? ' HD' : ''));
+          end += sm[0].length;
+        }
+        const sd = RE.superDuty.exec(st.work.slice(end));
+        if (sd) { end += sd[0].length; series = series.length ? series.map(x => x + ' Super Duty') : ['Super Duty']; }
+        const cl = series.length && !sd ? RE.classic.exec(st.work.slice(end)) : null;
+        if (cl) { end += cl[0].length; series = series.map(x => x + ' Classic'); }
+      }
+      let base = pick.model;
+      if (/^[1-5]500$/.test(key)) {
+        const hd = /^\s?HD(?![a-z0-9])/i.exec(st.work.slice(end));
+        if (hd) { end += hd[0].length; base += ' HD'; }
+        const cl = RE.classic.exec(st.work.slice(end));
+        if (cl) { end += cl[0].length; base += ' Classic'; }
+      }
+      found.push({ make: pick.make, base, series });
+      if (end > e) st.consume(e, end, 'M');
+      return 'M';
+    });
+    /* "Silverado / Sierra 1500" and "F-250 F-350 Super Duty": the series belongs to the sibling too. */
+    const isF = f => /^F-/.test(f.base);
+    for (const f of found) {
+      if (f.series.length || !RE.seriesBase.test(f.base)) continue;
+      const donor = found.find(d => d.series.length && RE.seriesBase.test(d.base) && isF(d) === isF(f));
+      if (!donor) continue;
+      f.series = isF(f) ? (donor.series.some(x => /Super Duty/.test(x)) ? ['Super Duty'] : []) : donor.series.slice();
+    }
+    for (const f of found) {
+      for (const model of (f.series.length ? f.series.map(x => f.base + ' ' + x) : [f.base])) {
+        if (!vehicles.some(v => v.make === f.make && v.model === model)) vehicles.push({ make: f.make, model });
+      }
+    }
+  }
+
+  function extractEngine(st) {
+    const disp = [], conf = [], names = [], quals = [];
+    let vin = '';
+    const push = (arr, v) => { if (!arr.includes(v)) arr.push(v); };
+    scan(st, RE.disp, m => { push(disp, parseFloat(m[3]).toFixed(1) + 'L'); return 'E'; });
+    scan(st, RE.dispT, m => { push(disp, m[3] + 'L'); push(quals, 'Turbo'); return 'E'; });
+    scan(st, RE.cc, m => { if (+m[3] < 49) return; push(disp, m[3] + 'cc'); return 'E'; });
+    scan(st, RE.ci, m => { push(disp, m[3] + 'ci'); return 'E'; });
+    scan(st, RE.conf, m => { push(conf, m[3].toUpperCase() + m[4]); return 'E'; });
+    scan(st, RE.inline, m => { push(conf, 'I' + m[3]); return 'E'; });
+    scan(st, RE.cyl, m => { push(conf, m[3] + ' Cyl'); return 'E'; });
+    scan(st, RE.engName, m => { push(names, ENGINE_NAMES[keyOf(m[2])] || m[2]); return 'E'; });
+    if (disp.length) scan(st, RE.boxer, m => { push(conf, m[3].toUpperCase() + m[4]); return 'E'; });
+    scan(st, RE.vin, m => { vin = 'VIN ' + m[3].toUpperCase(); return 'E'; });
+    if (disp.length || conf.length || names.length) {
+      for (let pass = 0; pass < 3; pass++) {
+        let hit = false;
+        scan(st, RE.qual, (m, s, e) => {
+          if (!prevMarked(st, s, 'E') && !nextMarked(st, e, 'E')) return;
+          const k = keyOf(m[2]);
+          push(quals, QUALIFIERS[k] || m[2].toUpperCase());
+          hit = true;
+          return 'E';
+        });
+        if (!hit) break;
+      }
+    }
+    return [disp.join('/'), conf.join('/'), ...names, ...quals, vin].filter(Boolean).join(' ');
+  }
+
+  function extractSimple(st, re, table, type) {
+    const out = [];
+    scan(st, re, m => {
+      const k = keyOf(m[2]);
+      let v = table[k];
+      if (!v) {
+        const d = k.match(/^([2-5])d/);
+        if (!d) return;
+        v = d[1] + ' Door';
+      }
+      if (!out.includes(v)) out.push(v);
+      return type;
+    });
+    return out.join(', ');
+  }
+
+  /* Cut exact values (a row's own brand, SKU, model) wherever they stand as whole words. */
+  function cutValue(st, value, type) {
+    const v = normalize(value).toLowerCase();
+    if (v.length < 2 || (/^\d+$/.test(v) && v.length < 4)) return 0;
+    let n = 0, from = 0, i;
+    while ((i = st.work.toLowerCase().indexOf(v, from)) >= 0) {
+      const before = i === 0 ? '' : st.work[i - 1], after = st.work[i + v.length] || '';
+      if (!/[a-z0-9]/i.test(before) && !/[a-z0-9]/i.test(after)) { st.consume(i, i + v.length, type); n++; }
+      from = i + v.length;
+    }
+    return n;
+  }
+
+  /* Connecting words left dangling beside something that was cut: "for", "fits", "w/", stray dashes and brackets. */
+  function cutGlue(st) {
+    const FIT = 'YKMEDBG';
+    for (let pass = 0; pass < 5; pass++) {
+      let changed = false;
+      const runs = [];
+      const re = /[^\u0001]+/g;
+      let m;
+      while ((m = re.exec(st.work))) runs.push([m.index, m.index + m[0].length]);
+      for (const [a, b] of runs) {
+        const text = st.work.slice(a, b);
+        if (!text.trim()) continue;
+        const before = a > 0 ? st.marks[a - 1] : '', after = b < st.work.length ? st.marks[b] : '';
+        const fitBefore = before && FIT.includes(before), fitAfter = after && FIT.includes(after);
+        const edgeBefore = a === 0, edgeAfter = b === st.work.length;
+        if ((fitBefore || fitAfter) && (before || edgeBefore) && (after || edgeAfter) && GLUE_ONLY.test(text)) {
+          st.consume(a, b, 'G'); changed = true; continue;
+        }
+        if (after) {
+          const tail = (fitAfter ? GLUE_TAIL : SYMBOL_TAIL).exec(text);
+          if (tail) {
+            let s = a + tail.index;
+            if (/[a-z0-9]/i.test(st.work[s]) === false && !/[,;:\-\/|&+(\[]/.test(st.work[s])) s++;
+            st.consume(s, b, 'G'); changed = true; continue;
+          }
+        }
+        if (fitBefore) {
+          const head = GLUE_HEAD.exec(text);
+          if (head) { st.consume(a, a + head[0].length, 'G'); changed = true; }
+        }
+      }
+      if (!changed) break;
+    }
+  }
+
+  function stem(word) {
+    let w = word.toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (w.length > 3 && /ies$/.test(w)) return w.slice(0, -3) + 'y';
+    if (w.length > 4 && /(s|x|z|ch|sh)es$/.test(w)) return w.slice(0, -2);
+    if (w.length > 3 && /s$/.test(w) && !/ss$/.test(w)) return w.slice(0, -1);
+    return w;
+  }
+
+  function cutRepeats(st, mode) {
+    if (mode === 'off') return;
+    const tokens = [];
+    const re = /[^\s\u0001]+/g;
+    let m;
+    let prevEnd = 0;
+    while ((m = re.exec(st.work))) {
+      tokens.push({ s: m.index, e: m.index + m[0].length, text: m[0], stem: stem(m[0]),
+        brk: st.work.slice(prevEnd, m.index).includes(FILL) });
+      prevEnd = m.index + m[0].length;
+    }
+    const words = tokens.map((t, i) => ({ t, i })).filter(w => w.t.stem);
+    const gone = new Array(words.length).fill(false);
+    const joinedBefore = w => w.i > 0 && JOINERS.test(tokens[w.i - 1].text);
+
+    for (let n = Math.min(6, Math.floor(words.length / 2)); n >= 2; n--) {
+      const seen = new Map();
+      let i = 0;
+      while (i + n <= words.length) {
+        let blocked = false;
+        for (let k = i; k < i + n; k++) if (gone[k]) { blocked = true; break; }
+        if (blocked) { i++; continue; }
+        const key = words.slice(i, i + n).map(w => w.t.stem).join(' ');
+        const first = seen.get(key);
+        if (first !== undefined && first + n <= i && !joinedBefore(words[i])) {
+          for (let k = i; k < i + n; k++) gone[k] = true;
+          i += n;
+        } else {
+          if (first === undefined) seen.set(key, i);
+          i++;
+        }
+      }
+    }
+    let last = null;
+    const seenWords = new Set();
+    words.forEach((w, i) => {
+      if (gone[i]) return;
+      const s = w.t.stem;
+      if (last === s) gone[i] = true;
+      else if (mode === 'words' && seenWords.has(s) && !POSITION_WORDS.has(s) && !/^\d+$/.test(s)) gone[i] = true;
+      if (!gone[i]) { last = s; seenWords.add(s); }
+    });
+    /* A leftover chunk after a dash, comma or cut whose every word was already said: "... - Front". */
+    const startsChunk = w => {
+      const p = w.i > 0 ? tokens[w.i - 1] : null;
+      return w.t.brk || (p && (/^[-|;,\/:]+$/.test(p.text) || /[,;|:]$/.test(p.text)));
+    };
+    const said = new Set();
+    let chunk = [];
+    const closeChunk = isFirst => {
+      const live = chunk.filter(i => !gone[i]);
+      if (!isFirst && live.length && live.every(i => said.has(words[i].t.stem)) && !joinedBefore(words[chunk[0]])) {
+        live.forEach(i => { gone[i] = true; });
+      }
+      chunk.forEach(i => { if (!gone[i]) said.add(words[i].t.stem); });
+      chunk = [];
+    };
+    let first = true;
+    words.forEach((w, i) => {
+      if (chunk.length && startsChunk(w)) { closeChunk(first); first = false; }
+      chunk.push(i);
+    });
+    if (chunk.length) closeChunk(first);
+    words.forEach((w, i) => { if (gone[i]) st.consume(w.t.s, w.t.e, 'R'); });
+  }
+
+  function titleCase(text) {
+    return text.split(' ').map((tok, i) => {
+      const bare = tok.replace(/[^A-Za-z0-9\/]/g, '');
+      if (/\d/.test(tok)) return tok;
+      if (ACRONYMS.has(bare.toUpperCase())) return tok.toUpperCase();
+      if (i > 0 && SMALL_WORDS.has(tok.toLowerCase())) return tok.toLowerCase();
+      return tok.toLowerCase().replace(/(^|[\-\/(])([a-z])/g, (x, p, c) => p + c.toUpperCase());
+    }).join(' ');
+  }
+
+  function assemble(st, casing) {
+    let out = '', gap = false;
+    for (let i = 0; i < st.orig.length; i++) {
+      if (st.marks[i]) { gap = true; continue; }
+      if (gap) { out += ' '; gap = false; }
+      out += st.orig[i];
+    }
+    let prev;
+    do {
+      prev = out;
+      out = out
+        .replace(/[(\[{]\s*[)\]}]/g, ' ')
+        .replace(/\s+([,;:])/g, '$1')
+        .replace(/([,;:|\/\-])(?:\s*[,;:|\/\-])+/g, '$1')
+        .replace(/\s{2,}/g, ' ')
+        .replace(/^[\s,;:|\/\-&+.)\]]+|[\s,;:|\/\-&+(\[]+$/g, '')
+        .replace(/^(?:for|fits?|with|and|&)\s+/i, '')
+        .replace(/\s+(?:for|fits?|fitting|with|w\/|and|&|to fit|compatible with|compatible)$/i, '');
+    } while (out !== prev);
+    if (casing === 'title') out = titleCase(out);
+    else if (casing === 'upper') out = out.toUpperCase();
+    return out;
+  }
+
+  function spansOf(st) {
+    const spans = [];
+    let i = 0;
+    while (i < st.orig.length) {
+      const t = st.marks[i];
+      let j = i + 1;
+      while (j < st.orig.length && st.marks[j] === t) j++;
+      spans.push([st.orig.slice(i, j), t]);
+      i = j;
+    }
+    return spans;
+  }
+
+  /* ctx: { strip: [values], year, make, model, engine } taken from the row's other columns. */
+  function cleanText(cfg, text, ctx) {
+    ctx = ctx || {};
+    const st = makeState(text);
+    let cuts = 0;
+    scan(st, cfg.supRe, () => { cuts++; return 'S'; });
+    for (const v of ctx.strip || []) cuts += cutValue(st, v, 'S');
+    scan(st, RE.warranty, () => { cuts++; return 'F'; });
+    scan(st, cfg.fillRe, () => { cuts++; return 'F'; });
+
+    const makes = new Set();
+    const vehicles = [];
+    const ctxMake = ctx.make ? (cfg.makeMap.get(keyOf(ctx.make)) || normalize(ctx.make)) : '';
+    if (ctxMake) makes.add(ctxMake);
+    if (ctx.model) cutValue(st, ctx.model, 'M');
+    if (ctx.engine) cutValue(st, ctx.engine, 'E');
+    extractMakes(st, cfg, makes);
+
+    let engine = extractEngine(st);
+    let years = extractYears(st, makes.size > 0);
+    extractModels(st, cfg, makes, vehicles);
+    if (!years.start && makes.size) years = extractYears(st, true);
+    const drive = cfg.extras ? extractSimple(st, RE.drive, DRIVES, 'D') : '';
+    const body = cfg.extras ? extractSimple(st, RE.body, BODIES, 'B') : '';
+
+    if (ctx.year) {
+      const ys = extractYears(makeState(ctx.year), true);
+      if (ys.start) years = ys;
+    }
+    if (ctx.engine && normalize(ctx.engine)) engine = normalize(ctx.engine);
+
+    let list = vehicles.slice();
+    for (const mk of makes) if (!list.some(v => v.make === mk)) list.push({ make: mk, model: '' });
+    const ctxModel = ctx.model ? normalize(ctx.model) : '';
+    if (ctxModel) list = [{ make: ctxMake || (list[0] && list[0].make) || '', model: ctxModel }];
+    else if (ctxMake) {
+      const mine = list.filter(v => v.make === ctxMake);
+      list = mine.length ? mine : [{ make: ctxMake, model: '' }];
+    }
+
+    cutGlue(st);
+    cutRepeats(st, cfg.dupes);
+    const repeats = st.marks.reduce((n, t, i) => n + (t === 'R' && st.marks[i - 1] !== 'R' ? 1 : 0), 0);
+
+    return {
+      original: st.orig,
+      clean: assemble(st, cfg.casing),
+      spans: spansOf(st),
+      yearStart: years.start, yearEnd: years.end, yearOpen: years.open,
+      vehicles: list, engine, drive, body, cuts, repeats
+    };
+  }
+
+  /* ---------- reading delimited text ---------- */
+  function detectDelimiter(text) {
+    const lines = text.split(/\r?\n/).filter(l => l.trim()).slice(0, 8);
+    let best = '', bestScore = 0;
+    for (const d of ['\t', ',', ';', '|']) {
+      const counts = lines.map(l => {
+        let n = 0, q = false;
+        for (const ch of l) { if (ch === '"') q = !q; else if (ch === d && !q) n++; }
+        return n;
+      });
+      const min = Math.min(...counts);
+      const score = min > 0 ? min * 10 + (counts.every(c => c === counts[0]) ? 5 : 0) + (d === '\t' ? 1 : 0) : 0;
+      if (score > bestScore) { bestScore = score; best = d; }
+    }
+    return best;
+  }
+
+  function parseDelimited(text) {
+    text = String(text || '').replace(/^﻿/, '');
+    const d = detectDelimiter(text);
+    const rows = [];
+    let row = [], cell = '', q = false, i = 0;
+    const pushCell = () => { row.push(cell); cell = ''; };
+    const pushRow = () => { pushCell(); if (row.some(c => c.trim() !== '')) rows.push(row); row = []; };
+    while (i < text.length) {
+      const ch = text[i];
+      if (q) {
+        if (ch === '"') { if (text[i + 1] === '"') { cell += '"'; i++; } else q = false; }
+        else cell += ch;
+      } else if (ch === '"' && d && cell === '') q = true;
+      else if (d && ch === d) pushCell();
+      else if (ch === '\n') pushRow();
+      else if (ch !== '\r') cell += ch;
+      i++;
+    }
+    if (cell !== '' || row.length) pushRow();
+    return rows;
+  }
+
+  const HEADER_WORDS = /desc|title|name|part|sku|brand|item|year|make|model|engine|price|qty|quantity|product|supplier|vendor|mfg|mfr|manufacturer|number|category|notes|upc|cost|^id$|#/i;
+  function toTable(rows) {
+    if (!rows.length) return { headers: [], rows: [] };
+    const width = Math.max(...rows.map(r => r.length));
+    const first = rows[0];
+    const isHeader = rows.length > 1 && first.every(c => String(c).length < 40) &&
+      first.some(c => HEADER_WORDS.test(String(c))) && !first.some(c => /\b(19|20)\d\d\b/.test(String(c)));
+    let headers;
+    let body = rows;
+    if (isHeader) { headers = first.map((c, i) => String(c).trim() || 'Column ' + (i + 1)); body = rows.slice(1); }
+    else headers = width === 1 ? ['Description'] : Array.from({ length: width }, (_, i) => 'Column ' + (i + 1));
+    while (headers.length < width) headers.push('Column ' + (headers.length + 1));
+    body = body.map(r => { const c = r.map(v => String(v == null ? '' : v)); while (c.length < width) c.push(''); return c; });
+    return { headers, rows: body };
+  }
+
+  function guessColumns(table) {
+    const { headers, rows } = table;
+    const find = re => headers.findIndex(h => re.test(h.trim()));
+    let desc = find(/desc/i);
+    if (desc < 0) desc = find(/title|product\s*name|item\s*name|^name$/i);
+    if (desc < 0) {
+      let best = -1;
+      headers.forEach((h, i) => {
+        const sample = rows.slice(0, 50);
+        const avg = sample.reduce((n, r) => n + (r[i] || '').length, 0) / Math.max(1, sample.length);
+        if (avg > best) { best = avg; desc = i; }
+      });
+    }
+    const strip = [];
+    headers.forEach((h, i) => {
+      if (i !== desc && /brand|supplier|vendor|manufacturer|mfg|mfr|sku|mpn|part\s*(no|num|number|#)|item\s*(no|num|number|#)|^part$/i.test(h.trim())) strip.push(i);
+    });
+    return {
+      desc,
+      year: find(/^(years?|yr|model\s*year|year\s*range)$/i),
+      make: find(/^(make|vehicle\s*make)$/i),
+      model: find(/^(model|vehicle\s*model)$/i),
+      engine: find(/^(engine|motor|engine\s*size|lit[er]{2}s?)$/i),
+      strip
+    };
+  }
+
+  /* ---------- whole-table cleaning ---------- */
+  function cleanTable(table, map, settings) {
+    const cfg = compile(settings);
+    const mapped = new Set([map.desc, map.year, map.make, map.model, map.engine].filter(i => i >= 0));
+    const passIdx = table.headers.map((h, i) => i).filter(i => !mapped.has(i));
+    const columns = [...passIdx.map(i => table.headers[i]), 'Part Description', 'Year Start', 'Year End', 'Make', 'Model',
+      'Engine', 'Drive', 'Body'];
+    if (settings.keepOriginal) columns.push('Original Description');
+
+    const out = [];
+    const seen = new Set();
+    const stats = { source: table.rows.length, cuts: 0, repeats: 0, withFitment: 0, duplicates: 0 };
+    table.rows.forEach((r, idx) => {
+      const get = i => (i >= 0 ? r[i] || '' : '');
+      const res = cleanText(cfg, get(map.desc), {
+        strip: (map.strip || []).map(i => r[i]).filter(Boolean),
+        year: get(map.year), make: get(map.make), model: get(map.model), engine: get(map.engine)
+      });
+      stats.cuts += res.cuts;
+      stats.repeats += res.repeats;
+      const hasFit = !!(res.yearStart || res.vehicles.length || res.engine);
+      if (hasFit) stats.withFitment++;
+      const groups = settings.split && res.vehicles.length > 1 ? res.vehicles.map(v => [v]) : [res.vehicles];
+      for (const vs of groups) {
+        const uniq = a => [...new Set(a.filter(Boolean))].join(', ');
+        const fit = [res.yearStart, res.yearOpen ? '' : res.yearEnd, uniq(vs.map(v => v.make)), uniq(vs.map(v => v.model)),
+          res.engine, res.drive, res.body];
+        const cells = [...passIdx.map(i => r[i] || ''), res.clean, ...fit];
+        if (settings.keepOriginal) cells.push(get(map.desc));
+        if (settings.dropDuplicateRows) {
+          const key = JSON.stringify(settings.keepOriginal ? cells.slice(0, -1) : cells);
+          if (seen.has(key)) { stats.duplicates++; continue; }
+          seen.add(key);
+        }
+        out.push({ src: idx + 1, cells, res, vehicles: vs, hasFit });
+      }
+    });
+    return { columns, rows: out, stats, partIndex: passIdx.length };
+  }
+
+  function toDelimited(columns, rows, delimiter) {
+    const q = v => {
+      v = String(v == null ? '' : v);
+      if (delimiter === '\t') return v.replace(/[\t\r\n]+/g, ' ');
+      return /[",\r\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
+    };
+    return [columns, ...rows.map(r => r.cells)].map(r => r.map(q).join(delimiter)).join('\r\n');
+  }
+
+  return { DEFAULT_SUPPLIERS, DEFAULT_FILLER, compile, cleanText, cleanTable, parseDelimited, toTable, guessColumns, toDelimited };
+})();
+if (typeof module !== 'undefined') module.exports = PartsCleaner;
+</script>
+
+<script>
+(function () {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const PAGE = 100;
+  const STORE = 'parts-data-cleaner.rules.v1';
+
+  const EXAMPLE = [
+    'SKU\tBrand\tTitle',
+    '17D1367CH\tACDelco\tACDelco Gold 17D1367CH Ceramic Front Disc Brake Pad Set for 2007-2013 Chevy Silverado 1500 5.3L V8 4WD - Brake Pads Front',
+    '926-126\tDorman\tDorman OE Solutions 926-126 Front Left Driver Side Door Lock Actuator Motor Fits 05-10 Honda Odyssey 3.5L V6 Brand New',
+    'FL-820-S\tMotorcraft\tMOTORCRAFT FL-820-S ENGINE OIL FILTER - 2004-2008 FORD F-150 5.4L V8 TRITON - OIL FILTER',
+    'RAD-2437\tSpectra Premium\tPremium High Quality Radiator Replacement for Toyota Camry 2002 2003 2004 2005 2006 2.4L L4 Sedan Free Shipping',
+    '234-9041\tDenso\tDenso 234-9041 Air Fuel Ratio Sensor Upstream compatible with 2003-2006 Toyota Tundra / Sequoia 4.7L V8',
+    'K80026\tMoog\tMoog K80026 Front Lower Ball Joint 99-06 Chevrolet Silverado GMC Sierra 1500 4x4 Ball Joint Front Lower',
+    '15717\tBosch\tBosch 15717 Oxygen Sensor, OE Fitment (Jeep Wrangler 2007-2011 3.8L V6)',
+    'ALT-11241\tTRQ\tNEW Alternator for Dodge Ram 1500 2500 3500 5.7L Hemi 2003-2008 160 Amp 1 Year Warranty',
+    'T304\tGates\tGates T304 Timing Belt Kit w/ Water Pump - Subaru Outback Legacy 2.5L H4 SOHC 2000-2009',
+    '171661\tMonroe\tMonroe 171661 Quick-Strut Complete Strut Assembly Front Right Passenger Side 2013-2018 Nissan Altima Sedan',
+    'SPW-8B\tTaylor\tSpark Plug Wire Set 8mm Blue High Performance',
+    'LSK-9916\tDorman\tLeaf Spring Shackle Kit Rear for 1999-2016 Ford F-250 F-350 Super Duty',
+    'BC-1210\tDuralast\tDuralast Gold Battery Charger 12V 10 Amp Automatic',
+    'H11-6K\tSylvania\tH11 LED Headlight Bulb Low Beam 6000K fits 2016+ Honda Civic',
+    '20-6722-00\tTYC\tTYC 20-6722-00 Headlight Assembly Left Driver Side for 06-08 Lexus IS250 IS350 w/o HID',
+    '17D1367CH\tACDelco\tACDelco Gold 17D1367CH Ceramic Front Disc Brake Pad Set for 2007-2013 Chevy Silverado 1500 5.3L V8 4WD - Brake Pads Front'
+  ].join('\n');
+
+  const S = {
+    table: { headers: [], rows: [] },
+    name: '', example: true,
+    map: { desc: -1, year: -1, make: -1, model: -1, engine: -1, strip: [] },
+    out: null, view: [], page: 0, sheets: null, canDownload: true
+  };
+
+  /* ---------- small helpers ---------- */
+  function el(tag, props, kids) {
+    const n = document.createElement(tag);
+    if (props) for (const k in props) {
+      if (k === 'class') n.className = props[k];
+      else if (k === 'text') n.textContent = props[k];
+      else n.setAttribute(k, props[k]);
+    }
+    for (const kid of kids || []) n.append(kid);
+    return n;
+  }
+  let toastTimer;
+  function toast(msg) {
+    const t = $('toast');
+    t.textContent = msg;
+    t.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { t.hidden = true; }, 3200);
+  }
+  function showError(msg) {
+    $('load-error').textContent = msg || '';
+    $('load-error').hidden = !msg;
+  }
+  const fmt = n => Number(n).toLocaleString();
+  const plural = (n, one, many) => fmt(n) + ' ' + (n === 1 ? one : many);
+
+  /* ---------- saved rules ---------- */
+  function readRules() {
+    try { return JSON.parse(localStorage.getItem(STORE) || 'null'); } catch (e) { return null; }
+  }
+  function saveRules() {
+    const data = {
+      suppliers: $('t-supplier').value, filler: $('t-filler').value, vehicles: $('t-vehicles').value,
+      dupes: $('o-dupes').value, casing: $('o-case').value, extras: $('o-extras').checked, split: $('o-split').checked,
+      rowdupes: $('o-rowdupes').checked, keeporig: $('o-keeporig').checked
+    };
+    try { localStorage.setItem(STORE, JSON.stringify(data)); } catch (e) { /* private window: rules just are not remembered */ }
+  }
+  function applyRules(r) {
+    r = r || {};
+    $('t-supplier').value = r.suppliers == null ? PartsCleaner.DEFAULT_SUPPLIERS : r.suppliers;
+    $('t-filler').value = r.filler == null ? PartsCleaner.DEFAULT_FILLER : r.filler;
+    $('t-vehicles').value = r.vehicles || '';
+    $('o-dupes').value = r.dupes || 'phrases';
+    $('o-case').value = r.casing || 'keep';
+    $('o-extras').checked = r.extras !== false;
+    $('o-split').checked = !!r.split;
+    $('o-rowdupes').checked = r.rowdupes !== false;
+    $('o-keeporig').checked = r.keeporig !== false;
+  }
+
+  /* ---------- loading data ---------- */
+  function setTable(rows, name, example) {
+    const table = PartsCleaner.toTable(rows);
+    if (!table.rows.length) { showError('That did not contain any rows. Check the file has data under its header row.'); return false; }
+    showError('');
+    S.table = table; S.name = name; S.example = !!example;
+    const g = PartsCleaner.guessColumns(table);
+    S.map = g;
+    buildColumnControls();
+    S.page = 0;
+    ['f-year', 'f-part'].forEach(id => { $(id).value = ''; });
+    $('f-review').checked = false;
+    run(true);
+    return true;
+  }
+
+  function loadExample() {
+    S.sheets = null; $('sheet-field').hidden = true;
+    setTable(PartsCleaner.parseDelimited(EXAMPLE), 'Example data', true);
+  }
+
+  async function loadFile(file) {
+    showError('');
+    const lower = file.name.toLowerCase();
+    try {
+      if (lower.endsWith('.xlsx')) {
+        const sheets = await readXlsx(await file.arrayBuffer());
+        if (!sheets.length) throw new Error('No sheets with data were found in that workbook.');
+        S.sheets = sheets;
+        const sel = $('sheet-select');
+        sel.replaceChildren(...sheets.map((s, i) => el('option', { value: i, text: s.name + ' (' + fmt(Math.max(0, s.rows.length - 1)) + ' rows)' })));
+        $('sheet-field').hidden = sheets.length < 2;
+        S.fileName = file.name;
+        setTable(sheets[0].rows, file.name, false);
+      } else if (lower.endsWith('.xls')) {
+        throw new Error('Old-style .xls workbooks are not supported. In Excel choose Save As and pick .xlsx or CSV, then open that file.');
+      } else {
+        S.sheets = null; $('sheet-field').hidden = true;
+        setTable(PartsCleaner.parseDelimited(await file.text()), file.name, false);
+      }
+    } catch (err) {
+      showError(err && err.message ? err.message : 'That file could not be read.');
+    }
+  }
+
+  /* Minimal .xlsx reader: unzip with the browser's own inflate, then read the sheet XML. */
+  async function readXlsx(buf) {
+    const u8 = new Uint8Array(buf), dv = new DataView(buf), td = new TextDecoder();
+    let eocd = -1;
+    for (let i = u8.length - 22; i >= Math.max(0, u8.length - 65600); i--) {
+      if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+    }
+    if (eocd < 0) throw new Error('That file is not a valid .xlsx workbook.');
+    const files = new Map();
+    let p = dv.getUint32(eocd + 16, true);
+    const count = dv.getUint16(eocd + 10, true);
+    for (let i = 0; i < count && dv.getUint32(p, true) === 0x02014b50; i++) {
+      const nameLen = dv.getUint16(p + 28, true), extraLen = dv.getUint16(p + 30, true), commentLen = dv.getUint16(p + 32, true);
+      files.set(td.decode(u8.subarray(p + 46, p + 46 + nameLen)), {
+        method: dv.getUint16(p + 10, true), size: dv.getUint32(p + 20, true), offset: dv.getUint32(p + 42, true)
+      });
+      p += 46 + nameLen + extraLen + commentLen;
+    }
+    async function text(name) {
+      const f = files.get(name);
+      if (!f) return '';
+      const start = f.offset + 30 + dv.getUint16(f.offset + 26, true) + dv.getUint16(f.offset + 28, true);
+      const data = u8.subarray(start, start + f.size);
+      if (f.method === 0) return td.decode(data);
+      if (f.method !== 8 || typeof DecompressionStream === 'undefined') {
+        throw new Error('This browser cannot unpack that workbook. Save it as CSV and open the CSV instead.');
+      }
+      const stream = new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+      return td.decode(await new Response(stream).arrayBuffer());
+    }
+    const xml = s => new DOMParser().parseFromString(s, 'application/xml');
+    const all = (node, tag) => Array.from(node.getElementsByTagNameNS('*', tag));
+
+    const shared = [];
+    const sst = await text('xl/sharedStrings.xml');
+    if (sst) for (const si of all(xml(sst), 'si')) {
+      shared.push(all(si, 't').filter(t => t.parentNode.localName !== 'rPh').map(t => t.textContent).join(''));
+    }
+    const rels = {};
+    const relXml = await text('xl/_rels/workbook.xml.rels');
+    if (relXml) for (const r of all(xml(relXml), 'Relationship')) rels[r.getAttribute('Id')] = r.getAttribute('Target');
+    const sheets = [];
+    const wb = await text('xl/workbook.xml');
+    for (const s of wb ? all(xml(wb), 'sheet') : []) {
+      const rid = s.getAttribute('r:id') || s.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships', 'id');
+      let target = rels[rid] || '';
+      target = target.startsWith('/') ? target.slice(1) : 'xl/' + target.replace(/^\.\//, '');
+      const body = await text(target);
+      if (!body) continue;
+      const rows = [];
+      for (const row of all(xml(body), 'row')) {
+        const cells = [];
+        let next = 0;
+        for (const c of all(row, 'c')) {
+          const ref = (c.getAttribute('r') || '').match(/^[A-Z]+/);
+          let col = next;
+          if (ref) { col = 0; for (const ch of ref[0]) col = col * 26 + (ch.charCodeAt(0) - 64); col -= 1; }
+          next = col + 1;
+          const type = c.getAttribute('t');
+          const v = all(c, 'v')[0];
+          let val = v ? v.textContent : '';
+          if (type === 's') val = shared[+val] || '';
+          else if (type === 'inlineStr') val = all(c, 't').map(t => t.textContent).join('');
+          else if (type === 'b') val = val === '1' ? 'TRUE' : 'FALSE';
+          else if (val !== '' && !type && isFinite(val)) val = String(Number(val));
+          while (cells.length < col) cells.push('');
+          cells[col] = val;
+        }
+        if (cells.some(x => String(x).trim() !== '')) rows.push(cells);
+      }
+      if (rows.length) sheets.push({ name: s.getAttribute('name') || 'Sheet', rows });
+    }
+    return sheets;
+  }
+
+  /* ---------- column mapping ---------- */
+  function buildColumnControls() {
+    const h = S.table.headers;
+    const options = (allowNone) => {
+      const list = allowNone ? [el('option', { value: -1, text: 'From description' })] : [];
+      h.forEach((name, i) => list.push(el('option', { value: i, text: name })));
+      return list;
+    };
+    $('map-desc').replaceChildren(...options(false));
+    $('map-desc').value = S.map.desc;
+    for (const k of ['year', 'make', 'model', 'engine']) {
+      $('map-' + k).replaceChildren(...options(true));
+      $('map-' + k).value = S.map[k];
+    }
+    buildStripChecks();
+  }
+  function buildStripChecks() {
+    const box = $('strip-cols');
+    const taken = new Set([S.map.desc, S.map.year, S.map.make, S.map.model, S.map.engine]);
+    const kids = [];
+    S.table.headers.forEach((name, i) => {
+      if (taken.has(i)) return;
+      const input = el('input', { type: 'checkbox', id: 'strip-' + i, value: i });
+      input.checked = S.map.strip.includes(i);
+      input.addEventListener('change', () => {
+        S.map.strip = S.map.strip.filter(x => x !== i);
+        if (input.checked) S.map.strip.push(i);
+        run();
+      });
+      kids.push(el('label', { class: 'check' }, [input, el('span', { text: name })]));
+    });
+    if (!kids.length) kids.push(el('span', { class: 'hint', text: 'No other columns in this data.' }));
+    box.replaceChildren(...kids);
+  }
+
+  /* ---------- cleaning + rendering ---------- */
+  function settings() {
+    return {
+      suppliers: $('t-supplier').value, filler: $('t-filler').value, vehicles: $('t-vehicles').value,
+      dupes: $('o-dupes').value, casing: $('o-case').value, extras: $('o-extras').checked,
+      split: $('o-split').checked, dropDuplicateRows: $('o-rowdupes').checked, keepOriginal: $('o-keeporig').checked
+    };
+  }
+
+  function run(resetFilters) {
+    const map = Object.assign({}, S.map, { strip: S.map.strip.filter(i => i !== S.map.desc) });
+    S.out = PartsCleaner.cleanTable(S.table, map, settings());
+    renderSource();
+    renderStats();
+    renderFilterOptions(resetFilters);
+    renderFrequent();
+    applyFilters();
+  }
+
+  function renderSource() {
+    const line = $('source-line');
+    const kids = [];
+    if (S.example) kids.push(el('span', { class: 'tag', text: 'Example' }));
+    kids.push(document.createTextNode(S.name + ' · ' + plural(S.table.rows.length, 'row', 'rows') + ' · ' + plural(S.table.headers.length, 'column', 'columns')));
+    line.replaceChildren(...kids);
+  }
+
+  function renderStats() {
+    const st = S.out.stats;
+    const pct = st.source ? Math.round(100 * st.withFitment / st.source) : 0;
+    const items = [
+      [fmt(S.out.rows.length), (S.out.rows.length === 1 ? 'clean row from ' : 'clean rows from ') + fmt(st.source)],
+      [fmt(st.cuts), st.cuts === 1 ? 'supplier or filler term cut' : 'supplier and filler terms cut'],
+      [fmt(st.repeats), st.repeats === 1 ? 'repeat cut' : 'repeats cut'],
+      [pct + '%', 'of rows with fitment found'],
+      [fmt(st.duplicates), st.duplicates === 1 ? 'duplicate row dropped' : 'duplicate rows dropped']
+    ];
+    $('stats').replaceChildren(...items.map(([n, label]) =>
+      el('div', { class: 'stat' }, [el('strong', { text: n }), el('span', { text: label })])));
+  }
+
+  function fillSelect(id, values, keep) {
+    const sel = $(id);
+    const prev = keep ? sel.value : '';
+    sel.replaceChildren(el('option', { value: '', text: 'Any' }), ...values.map(v => el('option', { value: v, text: v })));
+    sel.value = values.includes(prev) ? prev : '';
+  }
+  function renderFilterOptions(reset) {
+    const makes = new Set(), engines = new Set();
+    for (const r of S.out.rows) {
+      r.vehicles.forEach(v => v.make && makes.add(v.make));
+      if (r.res.engine) engines.add(r.res.engine);
+    }
+    fillSelect('f-make', [...makes].sort(), !reset);
+    fillSelect('f-engine', [...engines].sort(), !reset);
+    renderModelOptions(!reset);
+  }
+  function renderModelOptions(keep) {
+    const make = $('f-make').value;
+    const models = new Set();
+    for (const r of S.out.rows) r.vehicles.forEach(v => { if (v.model && (!make || v.make === make)) models.add(v.model); });
+    fillSelect('f-model', [...models].sort(), keep);
+  }
+
+  function renderFrequent() {
+    const counts = new Map();
+    const skip = new Set(['and', 'with', 'for', 'the', 'set', 'kit', 'of', 'to', 'in', 'w/', 'w/o', 'or']);
+    for (const r of S.out.rows) {
+      const seen = new Set();
+      for (const w of r.res.clean.split(/\s+/)) {
+        const k = w.replace(/^[^A-Za-z0-9]+|[^A-Za-z0-9]+$/g, '');
+        const low = k.toLowerCase();
+        if (k.length < 2 || /^\d+$/.test(k) || skip.has(low) || seen.has(low)) continue;
+        seen.add(low);
+        const c = counts.get(low) || { word: k, n: 0 };
+        c.n++;
+        counts.set(low, c);
+      }
+    }
+    const min = S.out.rows.length >= 40 ? 3 : 2;
+    const top = [...counts.values()].filter(c => c.n >= min).sort((a, b) => b.n - a.n).slice(0, 24);
+    $('freq-field').hidden = !top.length;
+    $('freq-chips').replaceChildren(...top.map(c => {
+      const b = el('button', { class: 'chip', type: 'button', title: 'Add "' + c.word + '" to the supplier list' }, [
+        document.createTextNode(c.word), el('b', { text: c.n })]);
+      b.addEventListener('click', () => {
+        const box = $('t-supplier');
+        box.value = (box.value.trim() ? box.value.replace(/\s+$/, '') + '\n' : '') + c.word;
+        saveRules();
+        run();
+        toast('"' + c.word + '" will now be cut from every description');
+      });
+      return b;
+    }));
+  }
+
+  function applyFilters() {
+    const year = parseInt($('f-year').value, 10);
+    const make = $('f-make').value, model = $('f-model').value, engine = $('f-engine').value;
+    const words = $('f-part').value.toLowerCase().split(/\s+/).filter(Boolean);
+    const review = $('f-review').checked;
+    S.view = S.out.rows.filter(r => {
+      if (review && r.hasFit) return false;
+      if (!isNaN(year)) {
+        const a = r.res.yearStart, b = r.res.yearOpen ? Infinity : r.res.yearEnd;
+        if (!a || year < a || year > b) return false;
+      }
+      if (make && !r.vehicles.some(v => v.make === make)) return false;
+      if (model && !r.vehicles.some(v => v.model === model && (!make || v.make === make))) return false;
+      if (engine && r.res.engine !== engine) return false;
+      if (words.length) {
+        const text = r.res.clean.toLowerCase();
+        if (!words.every(w => text.includes(w))) return false;
+      }
+      return true;
+    });
+    const pages = Math.max(1, Math.ceil(S.view.length / PAGE));
+    if (S.page >= pages) S.page = pages - 1;
+    renderRows();
+  }
+
+  function yearsText(res) {
+    if (!res.yearStart) return '';
+    if (res.yearOpen) return res.yearStart + '+';
+    return res.yearStart === res.yearEnd ? String(res.yearStart) : res.yearStart + '-' + res.yearEnd;
+  }
+  function cell(cls, text) {
+    return el('td', { class: cls + (text ? '' : ' empty-cell'), text: text || '—' });
+  }
+  function renderRows() {
+    const start = S.page * PAGE;
+    const slice = S.view.slice(start, start + PAGE);
+    const body = $('rows');
+    body.replaceChildren(...slice.map(r => {
+      const orig = el('td', { class: 'orig' }, r.res.spans.map(([text, type]) =>
+        type ? el('span', { class: 'm m-' + type, text }) : document.createTextNode(text)));
+      const uniq = a => [...new Set(a.filter(Boolean))].join(', ');
+      return el('tr', null, [
+        el('td', { class: 'num', text: r.src }),
+        orig,
+        cell('clean', r.res.clean),
+        cell('fit', yearsText(r.res)),
+        cell('fit', uniq(r.vehicles.map(v => v.make))),
+        cell('fit', uniq(r.vehicles.map(v => v.model))),
+        cell('fit', r.res.engine),
+        cell('fit', [r.res.drive, r.res.body].filter(Boolean).join(' · '))
+      ]);
+    }));
+    $('no-rows').hidden = slice.length > 0;
+    const pages = Math.max(1, Math.ceil(S.view.length / PAGE));
+    $('page-info').textContent = S.view.length
+      ? 'Rows ' + fmt(start + 1) + '–' + fmt(start + slice.length) + ' of ' + fmt(S.view.length)
+      : '0 rows';
+    $('btn-prev').disabled = S.page === 0;
+    $('btn-next').disabled = S.page >= pages - 1;
+    const filtered = S.view.length !== S.out.rows.length;
+    $('btn-download').textContent = 'Download CSV (' + fmt(S.view.length) + ')';
+    $('export-note').textContent = 'The export has ' + S.out.columns.length + ' columns: ' + S.out.columns.join(', ') + '.' +
+      (filtered ? ' Only the ' + fmt(S.view.length) + ' filtered rows are exported.' : '');
+  }
+
+  /* ---------- export ---------- */
+  function exportName() {
+    const base = (S.name || 'parts').replace(/\.[^.]+$/, '').replace(/[^\w\-]+/g, '-').replace(/^-+|-+$/g, '') || 'parts';
+    return base + '-cleaned.csv';
+  }
+  async function download() {
+    if (!S.view.length) { toast('There are no rows to export'); return; }
+    const csv = '﻿' + PartsCleaner.toDelimited(S.out.columns, S.view, ',');
+    if (window.claude && typeof window.claude.use === 'function') {
+      let dl = null;
+      try { dl = await window.claude.use('downloads'); } catch (e) { dl = null; }
+      if (!dl) { toast('Downloads are not available in this view. Use Copy for Excel.'); return; }
+      try {
+        await dl.save({ filename: exportName(), data: csv });
+        toast('Saved ' + fmt(S.view.length) + ' rows');
+      } catch (err) {
+        toast(err && err.code === 'declined' ? 'Download cancelled' : 'The file could not be saved here. Use Copy for Excel.');
+      }
+      return;
+    }
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const a = el('a', { href: url, download: exportName() });
+    document.body.append(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    toast('Saved ' + fmt(S.view.length) + ' rows');
+  }
+  async function copy() {
+    if (!S.view.length) { toast('There are no rows to copy'); return; }
+    const tsv = PartsCleaner.toDelimited(S.out.columns, S.view, '\t');
+    try {
+      await navigator.clipboard.writeText(tsv);
+      toast('Copied ' + fmt(S.view.length) + ' rows. Paste into Excel or Sheets.');
+    } catch (e) {
+      const box = $('paste-box');
+      $('paste-details').open = true;
+      box.value = tsv;
+      box.focus();
+      box.select();
+      toast('Copying was blocked. The rows are selected in the paste box: press Ctrl+C.');
+    }
+  }
+
+  /* ---------- wiring ---------- */
+  let timer;
+  const later = () => { clearTimeout(timer); timer = setTimeout(() => { saveRules(); run(); }, 350); };
+  ['t-supplier', 't-filler', 't-vehicles'].forEach(id => $(id).addEventListener('input', later));
+  ['o-dupes', 'o-case', 'o-extras', 'o-split', 'o-rowdupes', 'o-keeporig'].forEach(id =>
+    $(id).addEventListener('change', () => { saveRules(); run(); }));
+  for (const k of ['desc', 'year', 'make', 'model', 'engine']) {
+    $('map-' + k).addEventListener('change', e => {
+      S.map[k] = parseInt(e.target.value, 10);
+      S.map.strip = S.map.strip.filter(i => i !== S.map[k]);
+      buildStripChecks();
+      run(true);
+    });
+  }
+  let ftimer;
+  const refilter = () => { clearTimeout(ftimer); ftimer = setTimeout(() => { S.page = 0; applyFilters(); }, 150); };
+  ['f-year', 'f-part'].forEach(id => $(id).addEventListener('input', refilter));
+  ['f-engine', 'f-model', 'f-review'].forEach(id => $(id).addEventListener('change', refilter));
+  $('f-make').addEventListener('change', () => { renderModelOptions(true); refilter(); });
+  $('btn-prev').addEventListener('click', () => { S.page--; renderRows(); });
+  $('btn-next').addEventListener('click', () => { S.page++; renderRows(); });
+  $('btn-download').addEventListener('click', download);
+  $('btn-copy').addEventListener('click', copy);
+  $('btn-example').addEventListener('click', loadExample);
+  $('btn-file').addEventListener('click', () => $('file-input').click());
+  $('file-input').addEventListener('change', e => { const f = e.target.files[0]; if (f) loadFile(f); e.target.value = ''; });
+  $('sheet-select').addEventListener('change', e => {
+    const s = S.sheets && S.sheets[+e.target.value];
+    if (s) setTable(s.rows, S.fileName + ' / ' + s.name, false);
+  });
+  $('btn-paste').addEventListener('click', () => {
+    const text = $('paste-box').value;
+    if (!text.trim()) { showError('Paste some rows first.'); return; }
+    S.sheets = null; $('sheet-field').hidden = true;
+    if (setTable(PartsCleaner.parseDelimited(text), 'Pasted rows', false)) $('paste-details').open = false;
+  });
+  $('btn-reset').addEventListener('click', () => { applyRules(null); saveRules(); run(); toast('Rules reset to defaults'); });
+  const drop = $('drop');
+  ['dragenter', 'dragover'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add('over'); }));
+  ['dragleave', 'drop'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove('over'); }));
+  drop.addEventListener('drop', e => { const f = e.dataTransfer && e.dataTransfer.files[0]; if (f) loadFile(f); });
+
+  if (window.claude && typeof window.claude.use === 'function') {
+    window.claude.use('downloads').then(dl => { if (!dl) $('btn-download').hidden = true; }).catch(() => { $('btn-download').hidden = true; });
+  }
+
+  applyRules(readRules());
+  loadExample();
+})();
+</script>
+</body>
+</html>
