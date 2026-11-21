@@ -277,9 +277,9 @@
           <p class="hint">One per line or comma-separated. Whole words only, any capitalisation.</p>
         </div>
         <div class="field" id="freq-field" hidden>
-          <span>Common words still left in descriptions</span>
+          <span>Possible supplier terms still in descriptions</span>
           <div class="chips" id="freq-chips"></div>
-          <p class="hint">Click a word to add it to the supplier list.</p>
+          <p class="hint">Words that are not ordinary part names. Click one to add it to the supplier list.</p>
         </div>
         <div class="field">
           <label for="t-filler">Sales filler</label>
@@ -370,6 +370,107 @@
 </div>
 <div class="toast" id="toast" role="status" hidden></div>
 
+<!-- Built-in example rows: an invented supplier feed, the same rows as assets/sample-supplier-parts.csv. -->
+<script type="text/plain" id="example-data">
+Supplier,Supplier SKU,Title,Cost,Qty On Hand
+ACDelco,17D1367CH,ACDelco Gold 17D1367CH Ceramic Front Disc Brake Pad Set for 2007-2013 Chevy Silverado 1500 5.3L V8 4WD - Brake Pads Front,38.42,112
+ACDelco,41-110,ACDelco Professional 41-110 Iridium Spark Plug (Pack of 1) 2007-2013 Chevrolet Tahoe 5.3L V8,7.15,960
+ACDelco,PF48E,ACDelco PF48E Engine Oil Filter - Fits 2007-2019 Chevy Silverado Suburban Tahoe GMC Sierra Yukon 4.8L 5.3L 6.0L 6.2L V8 Oil Filter,5.88,1440
+ACDelco,252-845,GENUINE GM ACDELCO 252-845 WATER PUMP W/ GASKET - 07-14 SILVERADO SIERRA 1500 4.8L 5.3L V8 - NEW WATER PUMP,61.90,58
+Dorman,926-126,Dorman OE Solutions 926-126 Front Left Driver Side Door Lock Actuator Motor Fits 05-10 Honda Odyssey 3.5L V6 Brand New,24.30,75
+Dorman,741-644,"Dorman 741-644 Power Window Regulator and Motor Assembly, Front Driver Side for Select Chevrolet / GMC Models 1999-2006",33.75,41
+Dorman,911-707,Dorman 911-707 Vapor Canister Purge Valve Compatible with Select Honda Models 2003-2007 Accord 2.4L L4,18.20,130
+Dorman,264-929,Dorman 264-929 Engine Valve Cover - 2005-2010 Chrysler 300 / Dodge Charger / Magnum 2.7L V6 Valve Cover w/ Gasket,54.10,22
+Motorcraft,FL-820-S,MOTORCRAFT FL-820-S ENGINE OIL FILTER - 2004-2008 FORD F-150 5.4L V8 TRITON - OIL FILTER,4.95,2100
+Motorcraft,SP-515,Motorcraft SP-515 Spark Plug Platinum 2004-2008 Ford F150 Expedition Lincoln Navigator 5.4L 3V Triton Spark Plugs (Set of 8),68.00,37
+Motorcraft,PW-506,Water Pump | Fits: 2011-2016 Ford F-150 3.5L V6 EcoBoost | Brand: Motorcraft | PN: PW-506,72.44,19
+Motorcraft,BRF-1478,Motorcraft BRF-1478 Rear Disc Brake Rotor for 2012 2013 2014 Ford F-150 6 Lug - Brake Rotor Rear,44.60,64
+Denso,234-9041,Denso 234-9041 Air Fuel Ratio Sensor Upstream compatible with 2003-2006 Toyota Tundra / Sequoia 4.7L V8,58.75,48
+Denso,210-0469,DENSO 210-0469 REMAN ALTERNATOR 2007-2011 TOYOTA CAMRY 2.4L L4 100 AMP - REMANUFACTURED ALTERNATOR,118.00,14
+Denso,471-1341,Denso 471-1341 New A/C Compressor with Clutch for 2006-2011 Honda Civic 1.8L (Excludes Hybrid),189.50,9
+Moog,K80026,Moog K80026 Front Lower Ball Joint 99-06 Chevrolet Silverado GMC Sierra 1500 4x4 Ball Joint Front Lower,21.60,88
+Moog,ES3493T,MOOG ES3493T Tie Rod End - Front Outer - 2000-2006 Chevy Tahoe Suburban 1500 GMC Yukon XL 1500 Steering Tie Rod End,19.25,104
+Moog,K750012,Moog K750012 Stabilizer Bar Link Kit Front for 2008-2012 Honda Accord & 2009-2014 Acura TSX Sway Bar Link,13.40,156
+Bosch,15717,"Bosch 15717 Oxygen Sensor, OE Fitment (Jeep Wrangler 2007-2011 3.8L V6)",31.05,72
+Bosch,9617,Bosch 9617 Platinum+4 Spark Plug - Single - Up to 4X Longer Life,6.20,640
+Bosch,BC905,Bosch QuietCast BC905 Premium Ceramic Disc Brake Pad Set For Nissan Altima Maxima Murano Infiniti G35 2002-2008 Front,35.90,53
+Bosch,69133,Bosch Fuel Pump Module Assembly 69133 for 2004 2005 2006 2007 Nissan Titan Armada 5.6L V8 4WD Crew Cab,97.35,11
+TRQ,ALT-11241,NEW Alternator for Dodge Ram 1500 2500 3500 5.7L Hemi 2003-2008 160 Amp 1 Year Warranty,104.00,17
+TRQ,BRA74485,TRQ Front &amp; Rear Ceramic Brake Pad &amp; Rotor Kit for 2009-2018 Dodge Ram 1500 5 Lug - Premium Brake Pads &amp; Rotors,142.80,26
+TRQ,PSA59178,TRQ 8 Piece Steering & Suspension Kit Control Arms Ball Joints Tie Rods Sway Bar Links for 2004-2008 Ford F-150 4WD,214.00,8
+TRQ,HLA92510,"TRQ Headlight Assembly Pair, Left & Right, Halogen, for 2014-2015 Chevy Silverado 1500 - Headlights Set",168.40,12
+Gates,T304,Gates T304 Timing Belt Kit w/ Water Pump - Subaru Outback Legacy 2.5L H4 SOHC 2000-2009,121.15,23
+Gates,K060841,Gates K060841 Micro-V Serpentine Belt for 2005-2010 Chrysler 300C 5.7L V8 HEMI,22.70,95
+Gates,38389,Gates 38389 Belt Tensioner Assembly – 2003–2007 Ford F-250 F-350 Super Duty 6.0L Power Stroke Diesel,58.30,31
+Monroe,171661,Monroe 171661 Quick-Strut Complete Strut Assembly Front Right Passenger Side 2013-2018 Nissan Altima Sedan,96.55,27
+Monroe,37288,MONROE 37288 OESPECTRUM SHOCK ABSORBER REAR 2WD - 04-12 CHEVY COLORADO / GMC CANYON - REAR SHOCK,29.80,84
+Monroe,58640,Monroe 58640 Load Adjusting Shock Absorber Rear - Pair - 2007-2020 Toyota Tundra 2WD/4WD,88.20,20
+TYC,20-6722-00,TYC 20-6722-00 Headlight Assembly Left Driver Side for 06-08 Lexus IS250 IS350 w/o HID,134.00,6
+TYC,11-6183-00,TYC 11-6183-00 Tail Light Assembly Right Passenger Side - 2007-2013 Chevrolet Silverado 1500 2500HD 3500HD - Tail Lamp RH,41.15,45
+TYC,2952,TYC 2952 Radiator for 2007-2012 Dodge Caliber / Jeep Compass Patriot 2.0L 2.4L L4 Auto Trans,79.90,13
+Duralast,BC-1210,Duralast Gold Battery Charger 12V 10 Amp Automatic,52.00,30
+Duralast,DG1414,Duralast Gold DG1414 Ceramic Brake Pads Front - 2012-2016 Honda CR-V 2.4L - Lifetime Warranty,36.99,70
+Sylvania,H11-6K,H11 LED Headlight Bulb Low Beam 6000K fits 2016+ Honda Civic,17.30,210
+Sylvania,9006XS,Sylvania 9006XS SilverStar Ultra Halogen Headlight Bulb 12V 55W (2 Pack),23.10,180
+Fel-Pro,HS26190PT,Fel-Pro HS26190PT Head Gasket Set 1999-2006 Chevy GMC 4.8L 5.3L V8 Vortec VIN T VIN V Head Gasket Set w/ Bolts,119.45,16
+Fel-Pro,OS30771R,FEL-PRO OS30771R Oil Pan Gasket Set for 2011-2019 Ford Explorer Edge Flex Taurus 3.5L 3.7L V6,27.60,52
+Fel-Pro,VS50504R,"Fel-Pro VS50504R Valve Cover Gasket Set - Chevy Silverado, Tahoe, Suburban 5.3L 1999-2013",21.85,77
+Timken,HA590156,Timken HA590156 Front Wheel Bearing & Hub Assembly for 2004-2008 Ford F-150 4WD 6 Lug w/ ABS - Wheel Hub Bearing,84.25,33
+Timken,513288,Timken 513288 Rear Wheel Bearing and Hub Assembly 2010-2016 Chevy Equinox GMC Terrain FWD AWD,71.30,29
+Cardone,20-2206,A1 Cardone 20-2206 Remanufactured Power Steering Pump w/o Reservoir - 1997-2003 Ford F150 F250 Expedition 4.6L 5.4L,62.10,18
+Cardone,18-B4995,Cardone 18-B4995 Reman Brake Caliper Front Left LH w/ Bracket 2005-2015 Toyota Tacoma 4x4 / PreRunner,48.75,24
+Walker,16468,Walker 16468 Ultra EPA Catalytic Converter Direct Fit 2005-2006 Honda CR-V 2.4L L4,238.00,5
+Walker,21591,Walker Quiet-Flow SS 21591 Muffler Assembly - 2009-2013 Toyota Corolla 1.8L Stainless Steel Muffler,112.60,10
+NGK,6619,NGK 6619 Iridium IX Spark Plug LFR6AIX-11 - Pack of 4 - Subaru WRX 2.5L Turbo 2006-2014,29.95,140
+NGK,48646,"NGK 48646 U5055 Ignition Coil ‑ 2001‑2005 Honda Civic 1.7L SOHC, COP Ignition Coil",44.15,36
+KYB,341464,KYB 341464 Excel-G Gas Strut Front Left for Toyota Camry 2012 2013 2014 2015 2016 2017 Sedan,58.90,28
+KYB,SR4141,KYB SR4141 Strut-Plus Complete Corner Unit Assembly Front Right - Honda Accord 2008-2012 (Exc. Coupe),104.35,15
+Wagner,ZD1414,Wagner ThermoQuiet ZD1414 Ceramic Disc Brake Pad Set Front fits Ford F-150 2010-2020 Brake Pads,34.20,66
+Raybestos,980577R,Raybestos 980577R Professional Grade Disc Brake Rotor Front - 2007-2017 Jeep Wrangler JK 3.6L 3.8L,39.75,58
+Spectra Premium,CU2437,Premium High Quality Radiator Replacement for Toyota Camry 2002 2003 2004 2005 2006 2.4L L4 Sedan Free Shipping,74.00,21
+Spectra Premium,SP178H,Spectra Premium SP178H Fuel Pump Module Assembly 2004-2006 Chevrolet Silverado 1500 GMC Sierra 1500 4.8L 5.3L Ext Cab Short Bed,128.90,7
+Standard Motor Products,UF537,Standard Motor Products UF537 Ignition Coil 5.4L 3V V8 for 04-08 Ford F-150 Expedition Lincoln Navigator - Set of 8 Coils,131.20,12
+Standard Motor Products,PC637,SMP PC637 Crankshaft Position Sensor - 2003-2007 Honda Accord 2.4L / 2002-2006 CR-V 2.4L / Element 2003-2006,26.80,43
+A-Premium,APCA1022,A-Premium Front Lower Control Arm w/ Ball Joint Left & Right Compatible with Toyota Corolla 2009-2018 Matrix 2009-2013 Pontiac Vibe 2009-2010 2-PC Set,86.40,19
+A-Premium,APWR0331,A-Premium Power Window Regulator with Motor Compatible with Jeep Grand Cherokee 2005-2010 Front Passenger Side,37.25,34
+Detroit Axle,K6696-2,Detroit Axle - Front Lower Ball Joints for 2002-2008 Dodge Ram 1500 2WD - 2pc Set - 10 Year Warranty,31.90,62
+Detroit Axle,ALLWHEEL-12,Detroit Axle - 4WD Front Wheel Bearing Hubs + Tie Rods + Sway Bar Links for 07-13 Chevy Silverado Sierra 1500 Tahoe Yukon - 6pc Kit,139.00,14
+Mopar,68191349AC,Mopar 68191349AC Engine Oil Filter 2014-2023 Jeep Grand Cherokee Dodge Durango Ram 1500 3.6L Pentastar V6 OEM Genuine,9.80,520
+Mopar,53032221AA,GENUINE MOPAR 53032221AA SERPENTINE BELT TENSIONER 2003-2008 DODGE RAM 1500 2500 3500 5.7L HEMI,74.50,25
+WIX,57060,WIX 57060 Spin-On Lube Filter - Chevrolet Silverado 1500 2007-2021 5.3L - Oil Filter,6.40,880
+WIX,33960,WIX 33960 Fuel Filter Water Separator for 2011-2016 Chevy Silverado 2500HD 3500HD / GMC Sierra 2500 HD 6.6L Duramax Diesel,38.10,44
+K&N,33-2385,K&N 33-2385 High Performance Replacement Air Filter 2007-2018 Ford Expedition F-150 F-250 F-350 Lincoln Navigator 5.4L 6.2L V8,54.99,38
+K&N,HP-1017,K&N HP-1017 Performance Wrench-Off Oil Filter,13.25,260
+Akebono,ACT1089,Akebono ACT1089 ProACT Ultra-Premium Ceramic Brake Pad Set Front 2005-2010 Honda Odyssey / 2003-2008 Pilot / 2006-2014 Ridgeline,52.30,31
+Centric,120.65119,Centric 120.65119 Premium Brake Rotor Front for 2010-2020 Ford F-150 2WD 4WD,61.70,22
+Delphi,FG0053,Delphi FG0053 Fuel Pump Module - 1999-2003 Chevy Silverado 1500 GMC Sierra 1500 4.3L 4.8L 5.3L Regular Cab 8 ft Bed,119.00,9
+Mahle,OX 371D,MAHLE OX 371D Oil Filter Cartridge Mercedes-Benz C300 E350 ML350 3.5L V6 2006-2011,8.60,300
+Beck/Arnley,084-4338,Beck/Arnley 084-4338 Thermostat w/ Housing 2006-2011 Honda Civic 1.8L,34.85,40
+Four Seasons,75744,Four Seasons 75744 HVAC Blower Motor w/ Wheel for 2002-2009 Chevy Trailblazer GMC Envoy Buick Rainier Isuzu Ascender,46.20,27
+UAC,CO 10663AC,UAC CO 10663AC A/C Compressor - 2007-2012 Nissan Altima 2.5L L4 - New AC Compressor w/ Clutch,176.00,6
+Purolator,L14610,Purolator L14610 PurolatorONE Engine Oil Filter fits Toyota Camry Corolla RAV4 1.8L 2.4L 1998-2011,5.10,740
+Fram,CA10262,FRAM CA10262 Extra Guard Air Filter 2007-2013 Chevy Silverado Tahoe Suburban Avalanche GMC Sierra Yukon Cadillac Escalade 4.8L 5.3L 6.0L 6.2L,14.70,190
+Mobil 1,M1-113A,Mobil 1 M1-113A Extended Performance Oil Filter,11.95,310
+Carquest,CQ-84-1210,Carquest Wearever Gold Ceramic Brake Pads - Rear - 2008-2012 Chevy Malibu / 2005-2010 Pontiac G6 / 2007-2009 Saturn Aura,29.40,48
+Taylor,SPW-8B,Spark Plug Wire Set 8mm Blue High Performance,41.00,35
+Generic,LSK-9916,Leaf Spring Shackle Kit Rear for 1999-2016 Ford F-250 F-350 Super Duty,33.60,50
+Generic,PB-1012,Pilot Bearing 10-12 inch clutch,6.75,400
+Generic,HB-M12,Set of 8 Cylinder Head Bolts M12x1.5,24.90,60
+Generic,WB-22,Wiper Blade 22 inch All Season,7.80,500
+Generic,CAB-4AWG,4 AWG Battery Cable 24 inch Red w/ 3/8 Lugs,9.15,220
+Generic,MINI-FUSE,Mini Blade Fuse Assortment 120 pc 5A-30A,8.40,150
+Generic,TPMS-315,TPMS Sensor 315MHz for 2007-2014 Chevy Silverado Tahoe GMC Sierra Yukon Cadillac Escalade (Set of 4),58.00,42
+Generic,RK-MZ3,"Rear Brake Pads for Mazda 3 2010-2013 2.0L, Mazda 5 2012-2015",22.10,57
+Generic,HG-328,BMW 328i 2007-2013 3.0L I6 Valve Cover Gasket Set N52 Engine,31.50,26
+Generic,WP-TDI,Water Pump for VW Jetta Golf Beetle 1.9L TDI Diesel 1999-2004,47.20,18
+Generic,IC-20T,Intercooler Hose Kit for 2010-2012 Hyundai Genesis Coupe 2.0T,64.00,11
+Generic,TL-RAM19,RAM 1500 Classic 2019-2022 Tail Light Assembly Left LH Driver,93.00,13
+Generic,CAI-MUS,'05-'09 Mustang GT 4.6L V8 Cold Air Intake Kit,149.00,7
+Generic,MIR-T680,Hood Mirror Chrome LH for 2013-2021 Kenworth T680,118.00,4
+Generic,BRK-RZR,Front Brake Pads Sintered for Polaris RZR 900 2015-2020,19.90,65
+ACDelco,17D1367CH,ACDelco Gold 17D1367CH Ceramic Front Disc Brake Pad Set for 2007-2013 Chevy Silverado 1500 5.3L V8 4WD - Brake Pads Front,38.42,112
+</script>
+
 <script id="engine">
 /* Cleaning engine. No DOM access in this block so it can be tested on its own
    (see scripts/test-parts-cleaner.mjs). */
@@ -391,7 +492,7 @@ Audi: A3, A4, A5, A6, A7, A8, Q3, Q5, Q7, Q8, S3, S4, S5, S6, S7, S8, RS3, RS5, 
 BMW: 1 Series, 2 Series, 3 Series, 4 Series, 5 Series, 6 Series, 7 Series, 8 Series, 128i, 135i, 228i, 230i, 320i, 323i, 325i, 325xi, 325Ci, 328i, 328xi, 330i, 330xi, 330Ci, 335i, 335xi, 340i, 428i, 430i, 435i, 440i, 525i, 528i, 530i, 535i, 540i, 545i, 550i, 640i, 645Ci, 650i, 740i, 740Li, 745i, 745Li, 750i, 750Li, 760Li, M2, M3, M4, M5, M6, X1, X2, X3, X4, X5, X6, X7, Z3, Z4, i3, i4, i8, iX
 Buick: Cascada, Century?, Enclave, Encore, Envision, LaCrosse, LeSabre, Lucerne, Park Avenue, Rainier, Regal, Rendezvous, Riviera, Roadmaster, Skylark, Terraza, Verano
 Cadillac: ATS, CTS, CT4, CT5, CT6, DTS, DeVille, Eldorado, Escalade ESV, Escalade EXT, Escalade, Fleetwood, Seville, SRX, STS, XLR, XT4, XT5, XT6, XTS, ELR, Catera
-Chevrolet|Chevy|Chev: Astro?, Avalanche?, Aveo, Bel Air, Beretta, Blazer?, Bolt?, Camaro, Caprice, Captiva, Cavalier, Chevelle, Cobalt?, Colorado?, Corsica, Corvette, Cruze, El Camino, Equinox, Express?, HHR*, Impala, Lumina, Malibu, Metro?, Monte Carlo, Nova?, Prizm, S-10 Blazer, S-10, Silverado, Sonic?, Spark?, SS, SSR, Suburban, Tahoe, Tracker?, TrailBlazer, Traverse?, Trax, Uplander, Venture?, Volt?, C1500, C2500, C3500, K1500, K2500, K3500, C10?, K10?, K5 Blazer, 1500, 2500, 3500
+Chevrolet|Chevy|Chev: Astro?, Avalanche?, Aveo, Bel Air, Beretta, Blazer?, Bolt?, Camaro, Caprice, Captiva, Cavalier, Chevelle, Cobalt?, Colorado?, Corsica, Corvette, Cruze, El Camino, Equinox, Express?, HHR*, Impala, Lumina, Malibu, Metro?, Monte Carlo, Nova?, Prizm, S-10 Blazer, S-10, Silverado, Sonic?, Spark?, SS, SSR, Suburban, Tahoe, Tracker?, TrailBlazer|Trail Blazer, Traverse?, Trax, Uplander, Venture?, Volt?, C1500, C2500, C3500, K1500, K2500, K3500, C10?, K10?, K5 Blazer, 1500, 2500, 3500
 Chrysler: 200, 300C, 300M, 300, Aspen?, Cirrus, Concorde, Crossfire, LHS, LeBaron, New Yorker, Pacifica, PT Cruiser, Sebring, Town & Country|Town and Country, Voyager?
 Dodge: Avenger?, Caliber?, Grand Caravan, Caravan, Challenger?, Charger?, Dakota, Dart?, Durango, Hornet?, Intrepid?, Journey?, Magnum?, Neon?, Nitro?, Ramcharger, Ram?, Sprinter?, Stealth?, Stratus, Viper?, 1500, 2500, 3500
 Fiat: 500L, 500X, 500, 124 Spider
@@ -401,7 +502,7 @@ Geo: Metro?, Prizm, Storm?, Tracker?
 GMC: Acadia, Canyon?, Envoy, Jimmy?, Safari?, Savana, Sierra, Sonoma, Terrain?, Yukon XL, Yukon, S15, 1500, 2500, 3500
 Honda: Accord, Civic, Clarity?, CR-V*, CR-Z, Crosstour, CRX, Del Sol, Element?, Fit?, HR-V*, Insight?, Odyssey, Passport?, Pilot?, Prelude, Ridgeline, S2000
 Hummer: H1, H2, H3T, H3
-Hyundai: Accent?, Azera, Elantra, Entourage?, Equus, Genesis Coupe, Genesis?, Ioniq, Kona, Palisade, Santa Cruz, Santa Fe, Sonata, Tiburon, Tucson, Veloster, Venue?, Veracruz, XG350
+Hyundai: Accent?, Azera, Elantra, Entourage?, Equus, Genesis Coupe, Genesis?, Ioniq, Kona, Palisade, Santa Cruz, Santa Fe|SantaFe, Sonata, Tiburon, Tucson, Veloster, Venue?, Veracruz, XG350
 Infiniti|Infinity: EX35, EX37, FX35, FX37, FX45, FX50, G20, G25, G35, G37, I30, I35, J30, JX35, M35, M37, M45, M56, Q40, Q45, Q50, Q60, Q70, QX4, QX30, QX50, QX56, QX60, QX70, QX80
 Isuzu: Amigo, Ascender, Axiom?, D-Max, Hombre, NPR, Rodeo?, Trooper?, VehiCROSS
 Jaguar: E-Pace, F-Pace, F-Type, S-Type, X-Type, XE, XF, XJ6, XJ8, XJR, XJ, XK8, XKR, XK
@@ -427,8 +528,16 @@ Scion: FR-S, iA, iM, iQ, tC, xA, xB, xD
 Subaru: Ascent?, Baja, BRZ*, XV Crosstrek, Crosstrek, Forester, Impreza, Legacy?, Outback, Solterra, SVX, Tribeca, WRX STI, WRX*
 Suzuki: Aerio, Equator?, Forenza, Grand Vitara, Vitara, Kizashi, Reno?, Samurai, Sidekick, SX4, Verona, XL-7
 Tesla: Model 3, Model S, Model X, Model Y, Cybertruck
-Toyota: 4Runner, Avalon, bZ4X, C-HR, Camry Solara, Camry, Celica, Corolla Cross, Corolla, Cressida, Echo?, FJ Cruiser, GR86, Highlander, Land Cruiser, Matrix?, Mirai, MR2*, Paseo, Previa, Prius C, Prius V, Prius, RAV4, Sequoia, Sienna, Solara, Supra, T100, Tacoma, Tercel, Tundra, Venza, Yaris
+Toyota: 4Runner, Avalon, bZ4X, C-HR, Camry Solara, Camry, Celica, Corolla Cross, Corolla, Cressida, Echo?, FJ Cruiser, GR86, Highlander, Land Cruiser|Landcruiser, Matrix?, Mirai, MR2*, Paseo, Previa, Prius C, Prius V, Prius, RAV4, Sequoia, Sienna, Solara, Supra, T100, Tacoma, Tercel, Tundra, Venza, Yaris
 Volkswagen|VW: Arteon, Atlas?, New Beetle, Beetle?, Cabrio, CC, Corrado, Eos, Eurovan, GLI, Golf?, GTI*, ID.4, Jetta, Passat, Phaeton, Rabbit?, Routan, Taos, Tiguan, Touareg
+Freightliner: Cascadia, Columbia?, Coronado?, Century Class, M2
+Kenworth: T680, T880, T800, T660, T2000, W900
+Peterbilt: 379, 386, 387, 389, 579, 587
+Polaris: RZR XP 1000, RZR 1000, RZR 900, RZR 800, RZR, Sportsman, Ranger?, General?
+Can-Am: Maverick?, Defender?, Outlander?, Commander?, Renegade?, Spyder
+Kawasaki: Teryx, Mule?, Brute Force, KLR650, Ninja?
+Yamaha: YXZ1000R, Rhino?, Grizzly?, Raptor?, Banshee?, Wolverine?, Viking?, Kodiak?
+Harley-Davidson|Harley: Sportster, Softail, Road King, Street Glide, Electra Glide, Dyna?
 Volvo: 240, 740, 850, 940, 960, C30, C70, S40, S60, S70, S80, S90, V40, V50, V60, V70, V90, XC40, XC60, XC70, XC90
 `;
 
@@ -436,7 +545,7 @@ Volvo: 240, 740, 850, 940, 960, C30, C70, S40, S60, S70, S80, S90, V40, V50, V60
     'ACDelco Professional', 'ACDelco Gold', 'ACDelco Silver', 'ACDelco', 'A-Premium', 'Akebono', 'AP Exhaust', 'Beck/Arnley',
     'Bendix', 'Bosal', 'Bosch', 'BWD', 'A1 Cardone', 'Cardone', 'Carquest', 'Centric', 'Dayco', 'Delphi', 'Denso', 'Depo',
     'Detroit Axle', 'Dorman OE Solutions', 'OE Solutions', 'Dorman', 'Duralast Gold', 'Duralast', 'Fel-Pro', 'Four Seasons',
-    'Fram', 'Gates', 'GPD', 'K&N', 'KYB', 'Mahle', 'MasterPro', 'Mobil 1', 'Monroe', 'Quick-Strut', 'Moog', 'Mopar',
+    'Fram', 'Gates', 'GM Genuine Parts', 'GM Original Equipment', 'Genuine GM', 'GM Genuine', 'GM OE', 'GPD', 'K&N', 'KYB', 'Mahle', 'MasterPro', 'Mobil 1', 'Monroe', 'Quick-Strut', 'Moog', 'Mopar',
     'Motorcraft', 'NAPA', 'NGK', 'Purolator', 'Raybestos', 'SKF', 'Spectra Premium', 'Standard Motor Products', 'SMP',
     'Timken', 'TRQ', 'TYC', 'UAC', 'Wagner', 'Walker', 'WIX'
   ].join('\n');
@@ -482,9 +591,18 @@ Volvo: 240, 740, 850, 940, 960, C30, C70, S40, S60, S70, S80, S90, V40, V50, V60
   const keyOf = s => s.toLowerCase().replace(/[^a-z0-9&]/g, '');
   /* "F-150" also matches F150 and F 150; "RAV4" also matches RAV-4. */
   function flex(term) {
-    const parts = term.trim().split(/[\s\-]+/).filter(Boolean)
-      .flatMap(p => p.match(/[A-Za-z]+|\d+|[^A-Za-z\d]+/g) || []);
-    return parts.map(esc).join('[\\s\\-]?');
+    const re = /([A-Za-z]+|\d+|[^A-Za-z\d\s\-]+)|([\s\-]+)/g;
+    let out = '', prev = null, sep = '', m;
+    while ((m = re.exec(term.trim()))) {
+      if (m[2]) { sep = m[2]; continue; }
+      if (prev !== null) {
+        const twoWords = sep && !sep.includes('-') && /^[A-Za-z]+$/.test(prev) && /^[A-Za-z]+$/.test(m[1]);
+        out += twoWords ? '[\\s\\-]+' : '[\\s\\-]?';
+      }
+      out += esc(m[1]);
+      prev = m[1]; sep = '';
+    }
+    return out;
   }
   const bounded = body => new RegExp('(^|[^a-z0-9])(' + body + ')(?![a-z0-9])', 'gi');
   const splitTerms = text => text.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
@@ -544,10 +662,11 @@ Volvo: 240, 740, 850, 940, 960, C30, C70, S40, S60, S70, S80, S90, V40, V50, V60
     engName: bounded('duramax|cummins|power[\\s\\-]?stroke|ecoboost|ecotec|ecodiesel|hemi|vortec|pentastar|triton|skyactiv|tdi|i-?vtec|vtec'),
     vin: /(^|[^a-z0-9])(VIN\s*(?:code\s*)?[:=\-]?\s*([A-Z0-9]))(?![a-z0-9])/gi,
     qual: bounded('twin[\\s\\-]?turbo|bi[\\s\\-]?turbo|turbo[\\s\\-]?diesel|turbocharged|turbo|supercharged|diesel|hybrid|' +
-      'flex[\\s\\-]?fuel|ffv|dohc|sohc|ohv|ohc|efi|mpfi|sfi|gdi|tfsi|fsi|tsi|(?:8|12|16|20|24|32)v'),
+      'flex[\\s\\-]?fuel|ffv|dohc|sohc|ohv|ohc|efi|mpfi|sfi|gdi|tfsi|fsi|tsi|(?:2|3|4|8|12|16|20|24|32)v'),
     drive: bounded('4wd|4x4|awd|rwd|fwd|2wd|4x2|(?:four|all|rear|front|two|4|2)[\\s\\-]?wheel[\\s\\-]?drive'),
     body: bounded('(?:crew|extended|ext|regular|reg|standard|double|quad|mega|access|king|club)[\\s\\-]?cab|super[\\s\\-]?crew|' +
-      'super[\\s\\-]?cab|sedan|coupe|hatchback|wagon|(?:short|long)[\\s\\-]?bed|[2-5][\\s\\-]?(?:doors?|dr)'),
+      'super[\\s\\-]?cab|sedan|coupe|hatchback|wagon|(?:short|long)[\\s\\-]?bed|[2-5][\\s\\-]?(?:doors?|dr)|' +
+      '\\d(?:\\.\\d)?[\\s\\-]?(?:ft|foot)\\.?[\\s\\-]?(?:bed|box)'),
     warranty: /(^|[^a-z0-9])(\d+\s*-?\s*(?:years?|yrs?|months?|mos?|days?)\s+(?:limited\s+)?(?:warranty|guarantee))(?![a-z0-9])/gi,
     series: /^(\s*[-\/,&]?\s*)((1500|2500|3500|4500|5500)(\s?HD)?)(?![a-z0-9])/i,
     superDuty: /^(\s*)(super[\s\-]?duty)(?![a-z0-9])/i,
@@ -559,6 +678,9 @@ Volvo: 240, 740, 850, 940, 960, C30, C70, S40, S60, S70, S80, S90, V40, V50, V60
   const GLUE_TAIL = new RegExp('(?:(?:^|[^a-z0-9])(?:' + GLUE_WORDS + ')|[,;:\\-\\/|&+(\\[])\\s*$', 'i');
   const GLUE_HEAD = /^\s*(?:[)\]]|(?:models?|vehicles?|engines?|trucks?|cars?|only|applications?)(?=\s*(?:$|[,;.)\]\-|\/])))/i;
   const SYMBOL_TAIL = /[,;:\-\/|&+(\[]\s*$/;
+  const LABEL_TAIL = new RegExp('(?:^|[^a-z0-9])(?:brand|mfr|mfg|manufacturer|supplier|vendor|pn|p\\/n|sku|mpn|' +
+    'part\\s*(?:no|num|number)?|item\\s*(?:no|num|number)?|oem?\\s*(?:no|number)?|make|model|years?|engine|fitment|fits|' +
+    'vehicle|application|compatible)\\s*\\.?\\s*[:#=]\\s*$', 'i');
 
   function compile(settings) {
     settings = settings || {};
@@ -621,7 +743,7 @@ Volvo: 240, 740, 850, 940, 960, C30, C70, S40, S60, S70, S80, S90, V40, V50, V60
   function makeState(text) {
     const orig = normalize(text);
     return {
-      orig, work: orig, marks: new Array(orig.length).fill(''),
+      orig, work: orig, marks: new Array(orig.length).fill(''), makeAt: [],
       consume(s, e, type) {
         if (e <= s) return;
         for (let i = s; i < e; i++) this.marks[i] = type;
@@ -709,6 +831,38 @@ Volvo: 240, 740, 850, 940, 960, C30, C70, S40, S60, S70, S80, S90, V40, V50, V60
     return j < st.orig.length && types.includes(st.marks[j]) && st.marks[j] !== '';
   }
 
+  /* "Excludes Hybrid", "Exc. Coupe", "Non-Turbo": the term says what the part does NOT fit, so leave it in the text. */
+  function negated(st, s) {
+    return /(?:exc(?:l(?:udes?|uding)?)?\.?|except|non|not|without|w\/o)[\s\-]*$/i.test(st.orig.slice(0, s));
+  }
+
+  /* Model names that are also part words: "Spark Plug", "Leaf Spring", "Battery Charger", "12 Volt". */
+  const NOT_A_MODEL = {
+    spark: { next: /^(?:plugs?|arrest)/i },
+    leaf: { next: /^springs?$/i },
+    pilot: { next: /^(?:bearings?|bushings?|lights?|shaft)$/i },
+    charger: { prev: /^(?:battery|trickle|turbo|phone|usb)$/i, next: /^(?:cable|adapter|port)$/i },
+    volt: { prev: /^\d+$/, next: /^(?:meter|gauge)$/i },
+    bolt: { prev: /^(?:lug|head|caliper|banjo|flange|u|manifold|mounting|wheel|drain|pinch|cam|hub|axle)$/i,
+      next: /^(?:kit|set|pattern|on|pack|cutter)$/i },
+    flex: { next: /^(?:pipe|hose|plate|fuel|joint|coupling|fan|line|disc|connector|tube)$/i },
+    fit: { prev: /^(?:direct|exact|perfect|custom|universal|to|oe|oem|precise|easy)$/i },
+    element: { prev: /^(?:filter|heating|heater)$/i },
+    edge: { prev: /^(?:leading|trailing|cutting|door)$/i },
+    ram: { next: /^air$/i },
+    accent: { next: /^(?:lights?|lighting)$/i },
+    neon: { next: /^(?:lights?|signs?|tubes?)$/i },
+    golf: { next: /^carts?$/i },
+    tracker: { prev: /^gps$/i }
+  };
+  function partWord(st, key, s, e) {
+    const rule = NOT_A_MODEL[key];
+    if (!rule) return false;
+    const prev = /([A-Za-z0-9]+)[\s\-]*$/.exec(st.orig.slice(0, s));
+    const next = /^[\s\-]*([A-Za-z0-9]+)/.exec(st.orig.slice(e));
+    return !!((rule.prev && prev && rule.prev.test(prev[1])) || (rule.next && next && rule.next.test(next[1])));
+  }
+
   function extractMakes(st, cfg, makes) {
     scan(st, cfg.makeRe, (m, s, e) => {
       const name = cfg.makeMap.get(keyOf(m[2]));
@@ -719,6 +873,7 @@ Volvo: 240, 740, 850, 940, 960, C30, C70, S40, S60, S70, S80, S90, V40, V50, V60
         if (name === 'Ram' && /dodge[\s\-]*$/i.test(st.orig.slice(0, s))) return;
       }
       makes.add(name);
+      st.makeAt.push({ s, e, name });
       return 'K';
     });
   }
@@ -731,6 +886,7 @@ Volvo: 240, 740, 850, 940, 960, C30, C70, S40, S60, S70, S80, S90, V40, V50, V60
       if (!cands) return;
       const numeric = /^\d+$/.test(key);
       if (numeric && (st.work[s - 1] === '.' || (st.work[e] === '.' && /\d/.test(st.work[e + 1] || '')))) return;
+      if (partWord(st, key, s, e)) return;
       const inRow = cands.find(c => makes.has(c.make));
       let pick = inRow;
       if (!pick) {
@@ -738,7 +894,16 @@ Volvo: 240, 740, 850, 940, 960, C30, C70, S40, S60, S70, S80, S90, V40, V50, V60
         if (!free) return;
         pick = free;
       }
-      if ((numeric || key.length <= 2) && pick.flag !== '*' && !prevMarked(st, s, 'YKM')) return;
+      if ((numeric || key.length <= 2) && pick.flag !== '*') {
+        if (!prevMarked(st, s, 'YKM')) return;
+        let j = s - 1;
+        while (j >= 0 && /[\s\-,\/]/.test(st.orig[j])) j--;
+        const behind = st.marks[j] === 'K' ? st.makeAt.find(x => x.s <= j && j < x.e) : null;
+        if (behind) {
+          pick = cands.find(c => c.make === behind.name);
+          if (!pick) return;
+        }
+      }
       makes.add(pick.make);
 
       /* Truck series written after the name: "Silverado 1500", "Ram 1500 2500 3500", "F-350 Super Duty". */
@@ -783,23 +948,24 @@ Volvo: 240, 740, 850, 940, 960, C30, C70, S40, S60, S70, S80, S90, V40, V50, V60
   }
 
   function extractEngine(st) {
-    const disp = [], conf = [], names = [], quals = [];
-    let vin = '';
+    const disp = [], conf = [], names = [], quals = [], vins = [];
     const push = (arr, v) => { if (!arr.includes(v)) arr.push(v); };
-    scan(st, RE.disp, m => { push(disp, parseFloat(m[3]).toFixed(1) + 'L'); return 'E'; });
-    scan(st, RE.dispT, m => { push(disp, m[3] + 'L'); push(quals, 'Turbo'); return 'E'; });
+    const take = fn => (m, s, e) => { if (negated(st, s)) return; fn(m, s, e); return 'E'; };
+    scan(st, RE.disp, take(m => push(disp, parseFloat(m[3]).toFixed(1) + 'L')));
+    scan(st, RE.dispT, take(m => { push(disp, m[3] + 'L'); push(quals, 'Turbo'); }));
     scan(st, RE.cc, m => { if (+m[3] < 49) return; push(disp, m[3] + 'cc'); return 'E'; });
-    scan(st, RE.ci, m => { push(disp, m[3] + 'ci'); return 'E'; });
-    scan(st, RE.conf, m => { push(conf, m[3].toUpperCase() + m[4]); return 'E'; });
-    scan(st, RE.inline, m => { push(conf, 'I' + m[3]); return 'E'; });
-    scan(st, RE.cyl, m => { push(conf, m[3] + ' Cyl'); return 'E'; });
-    scan(st, RE.engName, m => { push(names, ENGINE_NAMES[keyOf(m[2])] || m[2]); return 'E'; });
-    if (disp.length) scan(st, RE.boxer, m => { push(conf, m[3].toUpperCase() + m[4]); return 'E'; });
-    scan(st, RE.vin, m => { vin = 'VIN ' + m[3].toUpperCase(); return 'E'; });
+    scan(st, RE.ci, take(m => push(disp, m[3] + 'ci')));
+    scan(st, RE.conf, take(m => push(conf, m[3].toUpperCase() + m[4])));
+    scan(st, RE.inline, take(m => push(conf, 'I' + m[3])));
+    scan(st, RE.cyl, take(m => push(conf, m[3] + ' Cyl')));
+    scan(st, RE.engName, take(m => push(names, ENGINE_NAMES[keyOf(m[2])] || m[2])));
+    if (disp.length) scan(st, RE.boxer, take(m => push(conf, m[3].toUpperCase() + m[4])));
+    scan(st, RE.vin, m => { push(vins, m[3].toUpperCase()); return 'E'; });
     if (disp.length || conf.length || names.length) {
       for (let pass = 0; pass < 3; pass++) {
         let hit = false;
         scan(st, RE.qual, (m, s, e) => {
+          if (negated(st, s)) return;
           if (!prevMarked(st, s, 'E') && !nextMarked(st, e, 'E')) return;
           const k = keyOf(m[2]);
           push(quals, QUALIFIERS[k] || m[2].toUpperCase());
@@ -809,18 +975,22 @@ Volvo: 240, 740, 850, 940, 960, C30, C70, S40, S60, S70, S80, S90, V40, V50, V60
         if (!hit) break;
       }
     }
-    return [disp.join('/'), conf.join('/'), ...names, ...quals, vin].filter(Boolean).join(' ');
+    return [disp.join('/'), conf.join('/'), ...names, ...quals, vins.length ? 'VIN ' + vins.join('/') : '']
+      .filter(Boolean).join(' ');
   }
 
   function extractSimple(st, re, table, type) {
     const out = [];
-    scan(st, re, m => {
+    scan(st, re, (m, s) => {
       const k = keyOf(m[2]);
+      if (negated(st, s)) return;
       let v = table[k];
       if (!v) {
-        const d = k.match(/^([2-5])d/);
-        if (!d) return;
-        v = d[1] + ' Door';
+        const bed = /^(\d(?:\.\d)?)[\s\-]?(?:ft|foot)/i.exec(m[2]);
+        const door = /^([2-5])[\s\-]?d/i.exec(m[2]);
+        if (bed) v = bed[1] + ' ft Bed';
+        else if (door) v = door[1] + ' Door';
+        else return;
       }
       if (!out.includes(v)) out.push(v);
       return type;
@@ -860,7 +1030,7 @@ Volvo: 240, 740, 850, 940, 960, C30, C70, S40, S60, S70, S80, S90, V40, V50, V60
           st.consume(a, b, 'G'); changed = true; continue;
         }
         if (after) {
-          const tail = (fitAfter ? GLUE_TAIL : SYMBOL_TAIL).exec(text);
+          const tail = LABEL_TAIL.exec(text) || (fitAfter ? GLUE_TAIL : SYMBOL_TAIL).exec(text);
           if (tail) {
             let s = a + tail.index;
             if (/[a-z0-9]/i.test(st.work[s]) === false && !/[,;:\-\/|&+(\[]/.test(st.work[s])) s++;
@@ -1193,25 +1363,7 @@ if (typeof module !== 'undefined') module.exports = PartsCleaner;
   const PAGE = 100;
   const STORE = 'parts-data-cleaner.rules.v1';
 
-  const EXAMPLE = [
-    'SKU\tBrand\tTitle',
-    '17D1367CH\tACDelco\tACDelco Gold 17D1367CH Ceramic Front Disc Brake Pad Set for 2007-2013 Chevy Silverado 1500 5.3L V8 4WD - Brake Pads Front',
-    '926-126\tDorman\tDorman OE Solutions 926-126 Front Left Driver Side Door Lock Actuator Motor Fits 05-10 Honda Odyssey 3.5L V6 Brand New',
-    'FL-820-S\tMotorcraft\tMOTORCRAFT FL-820-S ENGINE OIL FILTER - 2004-2008 FORD F-150 5.4L V8 TRITON - OIL FILTER',
-    'RAD-2437\tSpectra Premium\tPremium High Quality Radiator Replacement for Toyota Camry 2002 2003 2004 2005 2006 2.4L L4 Sedan Free Shipping',
-    '234-9041\tDenso\tDenso 234-9041 Air Fuel Ratio Sensor Upstream compatible with 2003-2006 Toyota Tundra / Sequoia 4.7L V8',
-    'K80026\tMoog\tMoog K80026 Front Lower Ball Joint 99-06 Chevrolet Silverado GMC Sierra 1500 4x4 Ball Joint Front Lower',
-    '15717\tBosch\tBosch 15717 Oxygen Sensor, OE Fitment (Jeep Wrangler 2007-2011 3.8L V6)',
-    'ALT-11241\tTRQ\tNEW Alternator for Dodge Ram 1500 2500 3500 5.7L Hemi 2003-2008 160 Amp 1 Year Warranty',
-    'T304\tGates\tGates T304 Timing Belt Kit w/ Water Pump - Subaru Outback Legacy 2.5L H4 SOHC 2000-2009',
-    '171661\tMonroe\tMonroe 171661 Quick-Strut Complete Strut Assembly Front Right Passenger Side 2013-2018 Nissan Altima Sedan',
-    'SPW-8B\tTaylor\tSpark Plug Wire Set 8mm Blue High Performance',
-    'LSK-9916\tDorman\tLeaf Spring Shackle Kit Rear for 1999-2016 Ford F-250 F-350 Super Duty',
-    'BC-1210\tDuralast\tDuralast Gold Battery Charger 12V 10 Amp Automatic',
-    'H11-6K\tSylvania\tH11 LED Headlight Bulb Low Beam 6000K fits 2016+ Honda Civic',
-    '20-6722-00\tTYC\tTYC 20-6722-00 Headlight Assembly Left Driver Side for 06-08 Lexus IS250 IS350 w/o HID',
-    '17D1367CH\tACDelco\tACDelco Gold 17D1367CH Ceramic Front Disc Brake Pad Set for 2007-2013 Chevy Silverado 1500 5.3L V8 4WD - Brake Pads Front'
-  ].join('\n');
+  const EXAMPLE = $('example-data').textContent.trim();
 
   const S = {
     table: { headers: [], rows: [] },
@@ -1289,7 +1441,7 @@ if (typeof module !== 'undefined') module.exports = PartsCleaner;
 
   function loadExample() {
     S.sheets = null; $('sheet-field').hidden = true;
-    setTable(PartsCleaner.parseDelimited(EXAMPLE), 'Example data', true);
+    setTable(PartsCleaner.parseDelimited(EXAMPLE), 'Example supplier feed', true);
   }
 
   async function loadFile(file) {
@@ -1490,26 +1642,52 @@ if (typeof module !== 'undefined') module.exports = PartsCleaner;
     fillSelect('f-model', [...models].sort(), keep);
   }
 
+  /* Everyday parts vocabulary. Words outside this list are the ones worth a look as supplier terms. */
+  const PART_WORDS = new Set(('front rear left right upper lower inner outer driver passenger side lh rh fr rr brake brakes pad pads ' +
+    'rotor rotors disc drum shoe shoes caliper assembly kit set pair pack piece pieces pc pcs single complete unit filter oil air fuel ' +
+    'pump water engine motor sensor valve gasket gaskets belt hose bearing bearings hub hubs wheel control arm arms ball joint joints ' +
+    'tie rod rods end ends link links bar sway stabilizer strut struts shock shocks absorber spring springs coil coils spark plug plugs ' +
+    'ignition headlight headlights tail light lights lamp bulb bulbs mirror door window regulator lock actuator switch handle radiator ' +
+    'condenser compressor alternator starter battery cable wire ceramic steering suspension power module cover head bolt bolts mount ' +
+    'mounts seal seals clutch transmission trans auto manual automatic axle shaft boot hardware heavy duty high performance exhaust ' +
+    'muffler catalytic converter pipe tank cap thermostat housing timing chain tensioner pulley serpentine blower hvac heater core fan ' +
+    'wiper blade fuse relay harness connector lug lugs nut nuts stud studs position crankshaft camshaft oxygen ratio upstream ' +
+    'downstream purge canister vapor intake manifold throttle body injector rail pressure temperature speed abs tpms led halogen hid ' +
+    'chrome black red blue white clear steel stainless aluminum rubber platinum iridium copper standard reman remanufactured corner ' +
+    'grade load adjusting gas extended extra guard lube cartridge separator inch amp volt low high beam bracket reservoir wheel cold ' +
+    'hood assortment sintered mini direct epa excludes exc except non only pan lifetime longer life up').split(' '));
+
+  /* Suggest words that look supplier-specific: outside the parts vocabulary, and ideally used by only one supplier. */
   function renderFrequent() {
     const counts = new Map();
-    const skip = new Set(['and', 'with', 'for', 'the', 'set', 'kit', 'of', 'to', 'in', 'w/', 'w/o', 'or']);
+    const skip = new Set(['and', 'with', 'for', 'the', 'of', 'to', 'in', 'w/', 'w/o', 'or', 'a']);
+    const map = S.map.strip.filter(i => i !== S.map.desc);
+    let brandCol = -1, fewest = Infinity;
+    for (const i of map) {
+      const distinct = new Set(S.table.rows.map(r => r[i])).size;
+      if (distinct > 1 && distinct < fewest) { fewest = distinct; brandCol = i; }
+    }
     for (const r of S.out.rows) {
       const seen = new Set();
+      const brand = brandCol >= 0 ? S.table.rows[r.src - 1][brandCol] : '';
       for (const w of r.res.clean.split(/\s+/)) {
         const k = w.replace(/^[^A-Za-z0-9]+|[^A-Za-z0-9]+$/g, '');
         const low = k.toLowerCase();
-        if (k.length < 2 || /^\d+$/.test(k) || skip.has(low) || seen.has(low)) continue;
+        if (k.length < 2 || /\d/.test(k) || skip.has(low) || PART_WORDS.has(low) || seen.has(low)) continue;
         seen.add(low);
-        const c = counts.get(low) || { word: k, n: 0 };
+        const c = counts.get(low) || { word: k, n: 0, brands: new Set() };
         c.n++;
+        c.brands.add(brand);
         counts.set(low, c);
       }
     }
-    const min = S.out.rows.length >= 40 ? 3 : 2;
-    const top = [...counts.values()].filter(c => c.n >= min).sort((a, b) => b.n - a.n).slice(0, 24);
+    const min = S.out.rows.length >= 400 ? 3 : S.out.rows.length >= 150 ? 2 : 1;
+    const oneSupplier = c => brandCol >= 0 && c.brands.size === 1;
+    const top = [...counts.values()].filter(c => c.n >= min)
+      .sort((a, b) => (oneSupplier(b) - oneSupplier(a)) || (b.n - a.n) || a.word.localeCompare(b.word)).slice(0, 24);
     $('freq-field').hidden = !top.length;
     $('freq-chips').replaceChildren(...top.map(c => {
-      const b = el('button', { class: 'chip', type: 'button', title: 'Add "' + c.word + '" to the supplier list' }, [
+      const b = el('button', { class: 'chip', type: 'button', title: 'Cut "' + c.word + '" from every description' }, [
         document.createTextNode(c.word), el('b', { text: c.n })]);
       b.addEventListener('click', () => {
         const box = $('t-supplier');
