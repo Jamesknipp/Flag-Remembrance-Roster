@@ -12,8 +12,9 @@ new Function('module', source)(mod);
 const PC = mod.exports;
 const cfg = PC.compile({});
 
-let failed = 0;
+let failed = 0, checks = 0;
 function check(label, got, want) {
+  checks++;
   const a = JSON.stringify(got), b = JSON.stringify(want);
   if (a !== b) { failed++; console.error(`FAIL ${label}\n   got  ${a}\n   want ${b}`); }
 }
@@ -65,6 +66,40 @@ const cases = [
 ];
 for (const [text, want] of cases) check(text, fit(PC.cleanText(cfg, text)), want);
 
+// Faults found by running the sample supplier feed (assets/sample-supplier-parts.csv).
+const found = [
+  ['ACDelco Professional Iridium Spark Plug (Pack of 1) 2007-2013 Chevrolet Tahoe 5.3L V8',
+    row('Iridium Spark Plug (Pack of 1)', '2007-2013', ['Chevrolet Tahoe'], '5.3L V8')],
+  ['Dorman Power Window Regulator for Select Chevrolet / GMC Models 1999-2006',
+    row('Power Window Regulator', '1999-2006', ['Chevrolet', 'GMC'])],
+  ['KYB Strut Assembly Front Right - Honda Accord 2008-2012 (Exc. Coupe)',
+    row('Strut Assembly Front Right (Exc. Coupe)', '2008-2012', ['Honda Accord'])],
+  ['Mopar Engine Oil Filter 2014-2023 Jeep Grand Cherokee Dodge Durango Ram 1500 3.6L Pentastar V6',
+    row('Engine Oil Filter', '2014-2023', ['Jeep Grand Cherokee', 'Dodge Durango', 'Ram 1500'], '3.6L V6 Pentastar')],
+  ['Fel-Pro Head Gasket Set 1999-2006 Chevy GMC 4.8L 5.3L V8 Vortec VIN T VIN V',
+    row('Head Gasket Set', '1999-2006', ['Chevrolet', 'GMC'], '4.8L/5.3L V8 Vortec VIN T/V')],
+  ['Delphi Fuel Pump Module - 1999-2003 Chevy Silverado 1500 Regular Cab 8 ft Bed',
+    row('Fuel Pump Module', '1999-2003', ['Chevrolet Silverado 1500'], '', '', 'Regular Cab, 8 ft Bed')],
+  ['GENUINE GM ACDELCO WATER PUMP W/ GASKET - 07-14 SILVERADO SIERRA 1500 4.8L 5.3L V8 - NEW WATER PUMP',
+    row('WATER PUMP W/ GASKET', '2007-2014', ['Chevrolet Silverado 1500', 'GMC Sierra 1500'], '4.8L/5.3L V8')],
+  ['Hood Mirror Chrome LH for 2013-2021 Kenworth T680', row('Hood Mirror Chrome LH', '2013-2021', ['Kenworth T680'])]
+];
+for (const [text, want] of found) check(text, fit(PC.cleanText(cfg, text)), want);
+check('label style', fit(PC.cleanText(cfg, 'Water Pump | Fits: 2011-2016 Ford F-150 3.5L V6 EcoBoost | Brand: Motorcraft | PN: PW-506',
+  { strip: ['PW-506'] })), row('Water Pump', '2011-2016', ['Ford F-150'], '3.5L V6 EcoBoost'));
+
+// The sample file and the example built into the page must stay the same rows.
+const sampleCsv = readFileSync(join(here, '..', 'assets', 'sample-supplier-parts.csv'), 'utf8').trim();
+const embedded = html.match(/<script type="text\/plain" id="example-data">([\s\S]*?)<\/script>/)[1].trim();
+check('example matches sample file', embedded === sampleCsv, true);
+const sample = PC.toTable(PC.parseDelimited(sampleCsv));
+const sampleOut = PC.cleanTable(sample, PC.guessColumns(sample), { dropDuplicateRows: true });
+check('sample row counts', [sampleOut.stats.source, sampleOut.rows.length, sampleOut.stats.duplicates], [96, 95, 1]);
+check('sample rows with fitment', sampleOut.stats.withFitment, 85);
+check('sample has no stray Tesla', sampleOut.rows.some(r => r.vehicles.some(v => v.make === 'Tesla')), false);
+check('sample parts never start or end with a connector',
+  sampleOut.rows.filter(r => /^(for|fits?|with|and)\b|\b(for|fits?|with|and)$|^[-|,&]|[-|,&(]$/i.test(r.res.clean)).map(r => r.res.clean), []);
+
 // A row's own brand and SKU are cut; separate fitment columns win over what the text says.
 const withCols = PC.cleanText(cfg, 'Acme AB-1234 Water Pump Silverado 1500 5.3L', {
   strip: ['Acme', 'AB-1234'], year: '2007-2013', make: 'Chevy', model: 'Silverado 1500', engine: '5.3L V8'
@@ -89,5 +124,5 @@ check('title case', PC.cleanText(upper, 'MOTORCRAFT ENGINE OIL FILTER - 2004-200
 const custom = PC.compile({ suppliers: 'Acme', filler: '', vehicles: 'Kenworth: T680, W900' });
 check('custom make', fit(PC.cleanText(custom, 'Acme Hood Mirror for 2018 Kenworth T680')), row('Hood Mirror', '2018-2018', ['Kenworth T680']));
 
-console.log(failed ? `${failed} check(s) failed` : `All ${cases.length + 9} checks passed`);
+console.log(failed ? `${failed} check(s) failed` : `All ${checks} checks passed`);
 process.exit(failed ? 1 : 0);

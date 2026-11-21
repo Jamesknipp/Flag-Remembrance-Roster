@@ -25,6 +25,8 @@ A fully local roster app for tracking aviators, their unit assignments, service 
 
 The supplier list, filler list and make/model list are all editable on the page. Nothing is uploaded; files are read in the browser.
 
+The page opens with an invented 96-row supplier feed so you can see the cleaning before loading your own data. The same rows are in `assets/sample-supplier-parts.csv` if you want to try the file-open path. Brand names in it are real aftermarket brands; the part numbers, costs and quantities are made up.
+
 To check the cleaning rules after editing them:
 
 ```bash
