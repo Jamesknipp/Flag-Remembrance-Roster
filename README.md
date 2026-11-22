@@ -33,6 +33,15 @@ To check the cleaning rules after editing them:
 node scripts/test-parts-cleaner.mjs
 ```
 
+## Also in this repo: UTV King theme files
+
+`utvking-theme/` holds Shopify theme files for the UTV King store, kept here until they are added to the store's theme.
+
+- `sections/sponsored-racers.liquid` is the Sponsored Racers section: one block per racer with a photo, name, nickname, type of racing, machine, class, hometown, bio, social links and an optional "shop the build" collection. A field left empty is not shown. A racer set to "Show full width" gets the large layout; the rest sit in a card grid.
+- `templates/page.sponsored-racers.json` is a page template that uses the section, with Earl "The Muscle" Russell as the first racer. His photo, bio and details are empty until he supplies them.
+
+To install: copy each file into the same folder of the theme, create a page in Shopify admin named "Sponsored Racers", set its template to `sponsored-racers`, and add the page to the main menu. Racers are added and edited in the theme editor.
+
 ## Run locally
 
 Because this is a static app, you can launch it directly in a browser or serve it with a local web server.

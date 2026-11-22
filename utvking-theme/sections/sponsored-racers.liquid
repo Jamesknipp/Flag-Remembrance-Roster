@@ -1,0 +1,588 @@
+{%- comment -%}
+  Sponsored racers: one block per racer, each with a photo, name, nickname,
+  discipline, a few details, a short bio, social links and an optional
+  "shop the build" collection. A racer marked "Show full width" gets the large
+  layout; the rest sit in a card grid.
+
+  Nothing is shown for a field that is left empty, so a racer can go live with
+  only a name and be filled in later.
+{%- endcomment -%}
+
+{%- liquid
+  assign heading = section.settings.heading | default: page.title
+
+  if template.name == 'page'
+    assign heading_tag = 'h1'
+    assign name_tag = 'h2'
+  else
+    assign heading_tag = 'h2'
+    assign name_tag = 'h3'
+  endif
+
+  capture wrapper_style
+    echo '--utvk-pt:' | append: section.settings.padding_top | append: 'px;'
+    echo '--utvk-pb:' | append: section.settings.padding_bottom | append: 'px;'
+    if section.settings.color_background != blank
+      echo '--utvk-bg:' | append: section.settings.color_background | append: ';'
+    endif
+    if section.settings.color_text != blank
+      echo '--utvk-text:' | append: section.settings.color_text | append: ';'
+    endif
+    if section.settings.color_accent != blank
+      echo '--utvk-accent:' | append: section.settings.color_accent | append: ';'
+    endif
+  endcapture
+-%}
+
+<div class="utvk-racers" style="{{ wrapper_style | strip }}">
+  <div class="utvk-racers__inner">
+    {%- if heading != blank or section.settings.intro != blank -%}
+      <header class="utvk-racers__header">
+        {%- if heading != blank -%}
+          <{{ heading_tag }} class="utvk-racers__heading">{{ heading | escape }}</{{ heading_tag }}>
+        {%- endif -%}
+        {%- if section.settings.intro != blank -%}
+          <div class="utvk-racers__intro rte">{{ section.settings.intro }}</div>
+        {%- endif -%}
+      </header>
+    {%- endif -%}
+
+    {%- if section.blocks.size > 0 -%}
+      <ul class="utvk-racers__list" role="list">
+        {%- for block in section.blocks -%}
+          {%- liquid
+            assign racer = block.settings
+            capture full_name
+              echo racer.first_name
+              if racer.nickname != blank
+                echo ' “' | append: racer.nickname | append: '”'
+              endif
+              echo ' ' | append: racer.last_name
+            endcapture
+            assign full_name = full_name | strip
+            if full_name == blank
+              continue
+            endif
+
+            assign has_details = false
+            if racer.machine != blank or racer.race_class != blank or racer.hometown != blank
+              assign has_details = true
+            endif
+
+            assign has_links = false
+            if racer.instagram != blank or racer.facebook != blank or racer.tiktok != blank or racer.youtube != blank
+              assign has_links = true
+            endif
+
+            if racer.featured
+              assign image_sizes = '(min-width: 750px) 42vw, 100vw'
+            else
+              assign image_sizes = '(min-width: 990px) 30vw, (min-width: 750px) 45vw, 100vw'
+            endif
+          -%}
+          <li
+            class="utvk-racer{% if racer.featured %} utvk-racer--featured{% endif %}"
+            {{ block.shopify_attributes }}
+          >
+            {%- if racer.photo != blank -%}
+              <div class="utvk-racer__media">
+                {%- assign photo_alt = racer.photo.alt | default: full_name -%}
+                {{
+                  racer.photo
+                  | image_url: width: 1400
+                  | image_tag: loading: 'lazy', widths: '360, 540, 720, 960, 1400', sizes: image_sizes, alt: photo_alt
+                }}
+              </div>
+            {%- elsif request.design_mode -%}
+              <div class="utvk-racer__media utvk-racer__media--placeholder">
+                {{ 'image' | placeholder_svg_tag: 'utvk-racer__placeholder' }}
+              </div>
+            {%- endif -%}
+
+            <div class="utvk-racer__body">
+              {%- if racer.discipline != blank -%}
+                <p class="utvk-racer__discipline">{{ racer.discipline | escape }}</p>
+              {%- endif -%}
+
+              <{{ name_tag }} class="utvk-racer__name">
+                {{- racer.first_name | escape -}}
+                {%- if racer.nickname != blank %} <span class="utvk-racer__nickname">“{{ racer.nickname | escape }}”</span>{% endif %}
+                {{ racer.last_name | escape -}}
+              </{{ name_tag }}>
+
+              {%- if has_details -%}
+                <dl class="utvk-racer__details">
+                  {%- if racer.machine != blank -%}
+                    <div>
+                      <dt>{{ section.settings.label_machine | escape }}</dt>
+                      <dd>{{ racer.machine | escape }}</dd>
+                    </div>
+                  {%- endif -%}
+                  {%- if racer.race_class != blank -%}
+                    <div>
+                      <dt>{{ section.settings.label_class | escape }}</dt>
+                      <dd>{{ racer.race_class | escape }}</dd>
+                    </div>
+                  {%- endif -%}
+                  {%- if racer.hometown != blank -%}
+                    <div>
+                      <dt>{{ section.settings.label_hometown | escape }}</dt>
+                      <dd>{{ racer.hometown | escape }}</dd>
+                    </div>
+                  {%- endif -%}
+                </dl>
+              {%- endif -%}
+
+              {%- if racer.bio != blank -%}
+                <div class="utvk-racer__bio rte">{{ racer.bio }}</div>
+              {%- endif -%}
+
+              {%- if has_links or racer.build_collection != blank -%}
+                <div class="utvk-racer__actions">
+                  {%- if racer.build_collection != blank and racer.build_label != blank -%}
+                    <a class="utvk-racer__button" href="{{ racer.build_collection.url }}">
+                      {{- racer.build_label | escape -}}
+                    </a>
+                  {%- endif -%}
+
+                  {%- if has_links -%}
+                    <ul class="utvk-racer__links" role="list">
+                      {%- if racer.instagram != blank -%}
+                        <li><a href="{{ racer.instagram }}" aria-label="{{ full_name | escape }} – Instagram">Instagram</a></li>
+                      {%- endif -%}
+                      {%- if racer.facebook != blank -%}
+                        <li><a href="{{ racer.facebook }}" aria-label="{{ full_name | escape }} – Facebook">Facebook</a></li>
+                      {%- endif -%}
+                      {%- if racer.tiktok != blank -%}
+                        <li><a href="{{ racer.tiktok }}" aria-label="{{ full_name | escape }} – TikTok">TikTok</a></li>
+                      {%- endif -%}
+                      {%- if racer.youtube != blank -%}
+                        <li><a href="{{ racer.youtube }}" aria-label="{{ full_name | escape }} – YouTube">YouTube</a></li>
+                      {%- endif -%}
+                    </ul>
+                  {%- endif -%}
+                </div>
+              {%- endif -%}
+            </div>
+          </li>
+        {%- endfor -%}
+      </ul>
+    {%- endif -%}
+  </div>
+</div>
+
+{% stylesheet %}
+  .utvk-racers {
+    background: var(--utvk-bg, transparent);
+    color: var(--utvk-text, inherit);
+    padding-block: var(--utvk-pt, 48px) var(--utvk-pb, 48px);
+  }
+
+  .utvk-racers__inner {
+    max-width: var(--page-width, 1200px);
+    margin-inline: auto;
+    padding-inline: clamp(16px, 4vw, 48px);
+  }
+
+  .utvk-racers__header {
+    max-width: 46rem;
+    margin-block-end: clamp(28px, 5vw, 56px);
+  }
+
+  .utvk-racers__heading {
+    margin: 0;
+    font-size: clamp(2.25rem, 6vw, 4rem);
+    line-height: 1.02;
+    text-wrap: balance;
+  }
+
+  .utvk-racers__heading::after {
+    content: '';
+    display: block;
+    width: 72px;
+    height: 6px;
+    margin-block-start: 0.45em;
+    background: var(--utvk-accent, currentColor);
+  }
+
+  .utvk-racers__intro {
+    margin-block-start: 1.25rem;
+    font-size: 1.125rem;
+    line-height: 1.55;
+  }
+
+  .utvk-racers__intro > :first-child,
+  .utvk-racer__bio > :first-child {
+    margin-block-start: 0;
+  }
+
+  .utvk-racers__intro > :last-child,
+  .utvk-racer__bio > :last-child {
+    margin-block-end: 0;
+  }
+
+  .utvk-racers__list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+    gap: clamp(20px, 3vw, 36px);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .utvk-racer {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
+    border-block-start: 4px solid var(--utvk-accent, currentColor);
+  }
+
+  .utvk-racer__media {
+    aspect-ratio: 4 / 3;
+    overflow: hidden;
+    background: color-mix(in srgb, currentColor 8%, transparent);
+  }
+
+  .utvk-racer__media img,
+  .utvk-racer__placeholder {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .utvk-racer__placeholder {
+    fill: currentColor;
+    opacity: 0.35;
+  }
+
+  .utvk-racer__body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 0.9rem;
+    padding: clamp(18px, 2.5vw, 28px);
+  }
+
+  .utvk-racer__discipline {
+    margin: 0;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .utvk-racer__name {
+    margin: 0;
+    font-size: clamp(1.5rem, 2.4vw, 1.875rem);
+    line-height: 1.1;
+    text-wrap: balance;
+  }
+
+  .utvk-racer__nickname {
+    color: var(--utvk-accent, inherit);
+    font-style: italic;
+    white-space: nowrap;
+  }
+
+  .utvk-racer__details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 2rem;
+    margin: 0;
+  }
+
+  .utvk-racer__details dt {
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    opacity: 0.75;
+  }
+
+  .utvk-racer__details dd {
+    margin: 0.15rem 0 0;
+    font-weight: 600;
+  }
+
+  .utvk-racer__bio {
+    line-height: 1.6;
+  }
+
+  .utvk-racer__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1.5rem;
+    margin-block-start: auto;
+    padding-block-start: 0.5rem;
+  }
+
+  .utvk-racer__button {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0.5rem 1.25rem;
+    border: 2px solid currentColor;
+    color: inherit;
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  .utvk-racer__button:hover {
+    background: color-mix(in srgb, currentColor 12%, transparent);
+  }
+
+  .utvk-racer__links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1.25rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .utvk-racer__links a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+
+  .utvk-racer__button:focus-visible,
+  .utvk-racer__links a:focus-visible {
+    outline: 3px solid currentColor;
+    outline-offset: 3px;
+  }
+
+  @media (min-width: 750px) {
+    .utvk-racer--featured {
+      grid-column: 1 / -1;
+      flex-direction: row;
+    }
+
+    .utvk-racer--featured .utvk-racer__media {
+      flex: 0 0 42%;
+      aspect-ratio: auto;
+      min-height: 380px;
+    }
+
+    .utvk-racer--featured .utvk-racer__body {
+      justify-content: center;
+      padding: clamp(28px, 4vw, 56px);
+    }
+
+    .utvk-racer--featured .utvk-racer__name {
+      font-size: clamp(2.25rem, 4.6vw, 3.75rem);
+      line-height: 1;
+    }
+
+    .utvk-racer--featured .utvk-racer__bio {
+      max-width: 38rem;
+      font-size: 1.0625rem;
+    }
+
+    .utvk-racer--featured .utvk-racer__actions {
+      margin-block-start: 0;
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "Sponsored racers",
+  "tag": "section",
+  "class": "section-sponsored-racers",
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "info": "Leave empty to use the page title."
+    },
+    {
+      "type": "richtext",
+      "id": "intro",
+      "label": "Intro"
+    },
+    {
+      "type": "header",
+      "content": "Detail labels"
+    },
+    {
+      "type": "text",
+      "id": "label_machine",
+      "label": "Machine label",
+      "default": "Machine"
+    },
+    {
+      "type": "text",
+      "id": "label_class",
+      "label": "Class label",
+      "default": "Class"
+    },
+    {
+      "type": "text",
+      "id": "label_hometown",
+      "label": "Hometown label",
+      "default": "Hometown"
+    },
+    {
+      "type": "header",
+      "content": "Colors",
+      "info": "Leave a color empty to use the theme's own."
+    },
+    {
+      "type": "color",
+      "id": "color_background",
+      "label": "Background"
+    },
+    {
+      "type": "color",
+      "id": "color_text",
+      "label": "Text"
+    },
+    {
+      "type": "color",
+      "id": "color_accent",
+      "label": "Accent"
+    },
+    {
+      "type": "header",
+      "content": "Spacing"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "label": "Top padding",
+      "min": 0,
+      "max": 120,
+      "step": 4,
+      "unit": "px",
+      "default": 48
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "label": "Bottom padding",
+      "min": 0,
+      "max": 120,
+      "step": 4,
+      "unit": "px",
+      "default": 64
+    }
+  ],
+  "blocks": [
+    {
+      "type": "racer",
+      "name": "Racer",
+      "settings": [
+        {
+          "type": "text",
+          "id": "first_name",
+          "label": "First name"
+        },
+        {
+          "type": "text",
+          "id": "nickname",
+          "label": "Nickname",
+          "info": "Shown in quotes between the first and last name."
+        },
+        {
+          "type": "text",
+          "id": "last_name",
+          "label": "Last name"
+        },
+        {
+          "type": "text",
+          "id": "discipline",
+          "label": "Type of racing",
+          "info": "For example: Drag racing, Short course, Desert."
+        },
+        {
+          "type": "image_picker",
+          "id": "photo",
+          "label": "Photo"
+        },
+        {
+          "type": "checkbox",
+          "id": "featured",
+          "label": "Show full width",
+          "default": false
+        },
+        {
+          "type": "text",
+          "id": "machine",
+          "label": "Machine"
+        },
+        {
+          "type": "text",
+          "id": "race_class",
+          "label": "Class"
+        },
+        {
+          "type": "text",
+          "id": "hometown",
+          "label": "Hometown"
+        },
+        {
+          "type": "richtext",
+          "id": "bio",
+          "label": "Bio"
+        },
+        {
+          "type": "header",
+          "content": "Links"
+        },
+        {
+          "type": "url",
+          "id": "instagram",
+          "label": "Instagram"
+        },
+        {
+          "type": "url",
+          "id": "facebook",
+          "label": "Facebook"
+        },
+        {
+          "type": "url",
+          "id": "tiktok",
+          "label": "TikTok"
+        },
+        {
+          "type": "url",
+          "id": "youtube",
+          "label": "YouTube"
+        },
+        {
+          "type": "header",
+          "content": "Shop the build"
+        },
+        {
+          "type": "collection",
+          "id": "build_collection",
+          "label": "Collection of parts on this build"
+        },
+        {
+          "type": "text",
+          "id": "build_label",
+          "label": "Button label",
+          "default": "Shop the build"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Sponsored racers",
+      "blocks": [
+        {
+          "type": "racer"
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}
