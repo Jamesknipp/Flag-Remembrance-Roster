@@ -1,0 +1,24 @@
+{
+  "sections": {
+    "main": {
+      "type": "sponsored-racers",
+      "blocks": {
+        "earl-russell": {
+          "type": "racer",
+          "settings": {
+            "first_name": "Earl",
+            "nickname": "The Muscle",
+            "last_name": "Russell",
+            "discipline": "Drag racing",
+            "featured": true
+          }
+        }
+      },
+      "block_order": ["earl-russell"],
+      "settings": {
+        "intro": "<p>Meet the racers UTV King is proud to back.</p>"
+      }
+    }
+  },
+  "order": ["main"]
+}
